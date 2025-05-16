@@ -41,8 +41,11 @@ from scGeneRAI import scGeneRAI
 
 def run_scgenerai(config, dataset_config):
 
+    config.write_yaml(yaml_file=op.join(config.output_directory, 'config.yaml'))
+    
+
     #setup temp dir for scGeneRAI to save results
-    temp_dir = config.temp_dir
+    temp_dir = op.join(config.output_directory, 'tmp')
     if not os.path.exists(temp_dir):
         os.makedirs(temp_dir)
     os.environ['scGeneRAI_TEMPDIR'] = temp_dir
@@ -95,9 +98,9 @@ def run_scgenerai(config, dataset_config):
 
         print(f'Elapsed time: {time.monotonic()-start}')
 
-    res_files = os.listdir(op.join(temp_dir))
+    res_files = os.listdir(op.join(temp_dir, 'results'))
     #res_data = pd.concat([pd.read_csv(temp_dir + '/results/' + res_file) for res_file in res_files])
-    res_data = pd.concat([pd.read_csv(temp_dir + '/results/' + res_file).assign(cell_name=res_file.split('_')[-1].replace('.csv', '')) for res_file in res_files])
+    res_data = pd.concat([pd.read_csv(op.join(temp_dir,'results', res_file)).assign(cell_name=res_file.split('_')[-1].replace('.csv', '')) for res_file in res_files])
     res_data = res_data.drop(res_data.columns[0], axis=1)
     #mean_resda = res_data[['LRP', 'source_gene', 'target_gene']].groupby(['source_gene', 'target_gene']).mean().reset_index()
     #get aa and nl like netmap
