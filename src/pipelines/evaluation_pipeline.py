@@ -7,7 +7,7 @@ import os
 import os.path as op
 import random
 
-sys.path.append('/data_nfs/og86asub/netmap/netmap-evaluation/')
+sys.path.append('/nfs/home/students/t.reim/netmap-evaluation')
 
 from src.methods.csnet.csnet_config import CsNetConfig
 from src.methods.scgenerai.scgenerai_config import ScGeneRAIConfig
