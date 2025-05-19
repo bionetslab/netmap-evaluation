@@ -1,0 +1,29 @@
+basedir: "/data_nfs/og86asub/netmap/netmap-evaluation/"
+outfolder: "/data_nfs/og86asub/netmap/netmap-evaluation"
+image_dir: "/data_nfs/og86asub/netmap/netmap-evaluation/images"
+r_script_dir: "/data_nfs/og86asub/netmap/netmap-evaluation/src/data_simulation/R"
+network_module_config: "/data_nfs/og86asub/netmap/netmap-evaluation/configurations/network_modules/network_modules.yaml"
+number_test_modules: 10
+input_network_dir: "/data_nfs/og86asub/netmap/netmap-evaluation/data/input_network"
+clustered_network_dir: "/data_nfs/og86asub/netmap/netmap-evaluation/data/clustered_network"
+simulated_data_dir: "/data_nfs/og86asub/netmap/netmap-evaluation/data/simulated_data"
+simulated_data_config_dir: "/data_nfs/og86asub/netmap/netmap-evaluation/configurations/data_simulation"
+
+data_simulation_base_configs:
+    - "/data_nfs/og86asub/netmap/netmap-evaluation/configurations/data_simulation/config_easy.yaml"
+
+netmap_base_configs:
+    - "/data_nfs/og86asub/netmap/NetMap_LRP/evaluation/configurations/netmap/base_config.yaml"
+
+netmap_config_dir: "/data_nfs/og86asub/netmap/netmap-evaluation/configurations/netmap"
+
+csnet_base_configs:
+    - "/data_nfs/og86asub/netmap/netmap-evaluation/configurations/csnet/config.yaml"
+csnet_config_dir: "/data_nfs/og86asub/netmap/netmap-evaluation/configurations/csnet/"
+
+scgenerai_base_configs:
+    - "/data_nfs/og86asub/netmap/netmap-evaluation/configurations/scgenerai/config.yaml"
+scgenerai_config_dir : "/data_nfs/og86asub/netmap/netmap-evaluation/configurations/scgenerai/"
+
+result_folder: "/data_nfs/og86asub/netmap/netmap-evaluation/results"
+
