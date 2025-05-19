@@ -1,0 +1,70 @@
+net_82_9865_net_51_11141_net_105_11470:
+  data_simulation:
+    configs:
+      config_easy: /data_nfs/og86asub/netmap/netmap-evaluation/configurations/data_simulation/config_easy/net_82_9865_net_51_11141_net_105_11470.config.yaml
+    data_path:
+      config_easy: /data_nfs/og86asub/netmap/netmap-evaluation/data/simulated_data/config_easy/net_82_9865_net_51_11141_net_105_11470
+  csnet:
+    config_easy:
+      config: /data_nfs/og86asub/netmap/netmap-evaluation/configurations/csnet/config/config_easy/net_82_9865_net_51_11141_net_105_11470.config.yaml
+      result: /data_nfs/og86asub/netmap/netmap-evaluation/results/csnet/config/config_easy/net_82_9865_net_51_11141_net_105_11470
+  scgenerai:
+    config_easy:
+      config: /data_nfs/og86asub/netmap/netmap-evaluation/configurations/scgenerai/config/config_easy/net_82_9865_net_51_11141_net_105_11470.config.yaml
+      result: /data_nfs/og86asub/netmap/netmap-evaluation/results/scgenerai/config/config_easy/net_82_9865_net_51_11141_net_105_11470
+net_105_11470_net_51_11141_net_82_9865:
+  data_simulation:
+    configs:
+      config_easy: /data_nfs/og86asub/netmap/netmap-evaluation/configurations/data_simulation/config_easy/net_105_11470_net_51_11141_net_82_9865.config.yaml
+    data_path:
+      config_easy: /data_nfs/og86asub/netmap/netmap-evaluation/data/simulated_data/config_easy/net_105_11470_net_51_11141_net_82_9865
+  csnet:
+    config_easy:
+      config: /data_nfs/og86asub/netmap/netmap-evaluation/configurations/csnet/config/config_easy/net_105_11470_net_51_11141_net_82_9865.config.yaml
+      result: /data_nfs/og86asub/netmap/netmap-evaluation/results/csnet/config/config_easy/net_105_11470_net_51_11141_net_82_9865
+  scgenerai:
+    config_easy:
+      config: /data_nfs/og86asub/netmap/netmap-evaluation/configurations/scgenerai/config/config_easy/net_105_11470_net_51_11141_net_82_9865.config.yaml
+      result: /data_nfs/og86asub/netmap/netmap-evaluation/results/scgenerai/config/config_easy/net_105_11470_net_51_11141_net_82_9865
+net_105_11470_net_82_9865_net_51_11141:
+  data_simulation:
+    configs:
+      config_easy: /data_nfs/og86asub/netmap/netmap-evaluation/configurations/data_simulation/config_easy/net_105_11470_net_82_9865_net_51_11141.config.yaml
+    data_path:
+      config_easy: /data_nfs/og86asub/netmap/netmap-evaluation/data/simulated_data/config_easy/net_105_11470_net_82_9865_net_51_11141
+  csnet:
+    config_easy:
+      config: /data_nfs/og86asub/netmap/netmap-evaluation/configurations/csnet/config/config_easy/net_105_11470_net_82_9865_net_51_11141.config.yaml
+      result: /data_nfs/og86asub/netmap/netmap-evaluation/results/csnet/config/config_easy/net_105_11470_net_82_9865_net_51_11141
+  scgenerai:
+    config_easy:
+      config: /data_nfs/og86asub/netmap/netmap-evaluation/configurations/scgenerai/config/config_easy/net_105_11470_net_82_9865_net_51_11141.config.yaml
+      result: /data_nfs/og86asub/netmap/netmap-evaluation/results/scgenerai/config/config_easy/net_105_11470_net_82_9865_net_51_11141
+net_51_11141_net_82_9865_net_105_11470:
+  data_simulation:
+    configs:
+      config_easy: /data_nfs/og86asub/netmap/netmap-evaluation/configurations/data_simulation/config_easy/net_51_11141_net_82_9865_net_105_11470.config.yaml
+    data_path:
+      config_easy: /data_nfs/og86asub/netmap/netmap-evaluation/data/simulated_data/config_easy/net_51_11141_net_82_9865_net_105_11470
+  csnet:
+    config_easy:
+      config: /data_nfs/og86asub/netmap/netmap-evaluation/configurations/csnet/config/config_easy/net_51_11141_net_82_9865_net_105_11470.config.yaml
+      result: /data_nfs/og86asub/netmap/netmap-evaluation/results/csnet/config/config_easy/net_51_11141_net_82_9865_net_105_11470
+  scgenerai:
+    config_easy:
+      config: /data_nfs/og86asub/netmap/netmap-evaluation/configurations/scgenerai/config/config_easy/net_51_11141_net_82_9865_net_105_11470.config.yaml
+      result: /data_nfs/og86asub/netmap/netmap-evaluation/results/scgenerai/config/config_easy/net_51_11141_net_82_9865_net_105_11470
+net_82_9865_net_105_11470_net_51_11141:
+  data_simulation:
+    configs:
+      config_easy: /data_nfs/og86asub/netmap/netmap-evaluation/configurations/data_simulation/config_easy/net_82_9865_net_105_11470_net_51_11141.config.yaml
+    data_path:
+      config_easy: /data_nfs/og86asub/netmap/netmap-evaluation/data/simulated_data/config_easy/net_82_9865_net_105_11470_net_51_11141
+  csnet:
+    config_easy:
+      config: /data_nfs/og86asub/netmap/netmap-evaluation/configurations/csnet/config/config_easy/net_82_9865_net_105_11470_net_51_11141.config.yaml
+      result: /data_nfs/og86asub/netmap/netmap-evaluation/results/csnet/config/config_easy/net_82_9865_net_105_11470_net_51_11141
+  scgenerai:
+    config_easy:
+      config: /data_nfs/og86asub/netmap/netmap-evaluation/configurations/scgenerai/config/config_easy/net_82_9865_net_105_11470_net_51_11141.config.yaml
+      result: /data_nfs/og86asub/netmap/netmap-evaluation/results/scgenerai/config/config_easy/net_82_9865_net_105_11470_net_51_11141

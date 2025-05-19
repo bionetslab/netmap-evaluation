@@ -2,6 +2,10 @@ results/
 data/
 configurations/
 configs/
+netmap/
+images/
+benchmark/
+
 
 
 # Byte-compiled / optimized / DLL files
@@ -57,7 +61,7 @@ coverage.xml
 .pytest_cache/
 cover/
 
-# Translations
+# Translations25AhmAfttW@5
 *.mo
 *.pot
 
@@ -178,7 +182,3 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
-
-# pixi environments
-.pixi
-*.egg-info

@@ -15,8 +15,18 @@ warnings.filterwarnings('ignore')
 from sklearn.metrics import *
 import itertools as itert
 import sys
-sys.path.append('../../..')
-from utils.config_utils import *
+
+import yaml
+def read_config(file):
+    with open(file, "r") as f:
+        config = yaml.safe_load(f)
+    return config
+
+
+def write_config(c, file):
+    with open(file, "w") as handle:
+        yaml.safe_dump(c, handle)
+
 
 def check_missing(adata, gene_list):
     """Subset an AnnData object to retain only specified genes."""
@@ -117,7 +127,7 @@ def compute_clustering_metric(perturbed, uniquely_perturbed_genes, k = 2):
     gg = ""
     for g in itert.combinations(uniquely_perturbed_genes, k):
         if gg != g[0]:
-            print(g[0])
+            #print(g[0])
             gg = g[0]
         subi  = get_subset(perturbed, g)
         try:
@@ -284,7 +294,7 @@ topGenes_df1 <- head(topGenes_df1, net_size + 1)
 topGenes_df2 <- head(topGenes_df2, net_size + 1)
 """
 
-def DE_GRN(TF, topGenes_df, outdir):
+def DE_GRN(TF, topGenes_df, outdir, case):
 
     TF = TF
     tglist = list(topGenes_df.index)
@@ -294,7 +304,7 @@ def DE_GRN(TF, topGenes_df, outdir):
         "target": tglist  # List of target genes
     })
     
-    filename = op.join(outdir, f"{TF}_network.csv")
+    filename = op.join(outdir, f"{TF}_network_{case}.csv")
     network_df.to_csv(filename, index=False) 
     return filename
     
@@ -383,7 +393,10 @@ def create_subsets(perturbed, genes_of_interest, data_config, netmap_config, ctr
         tf2= list(experimental_groups)[1].split("metadatasamples")[-1]
         #print(f"tf1: {tf1} and tf1: {tf2}")
         # END GET DE GRN
-        
+        topGenes_df1 = pd.DataFrame(topGenes_df1)
+        topGenes_df2 = pd.DataFrame(topGenes_df2)
+        print(topGenes_df1.index)
+
         network_1_file = DE_GRN(tf1, topGenes_df1, outdir, case = "DE_edgeR_and_pb" )
         #netmap_config['evaluation'] = {}
         netmap_config['evaluation']['gene_1'] = tf1
@@ -409,6 +422,9 @@ def create_subsets(perturbed, genes_of_interest, data_config, netmap_config, ctr
         topGenes_df1 = ro.r('topGenes_df1')
         topGenes_df2 = ro.r('topGenes_df2')
         experimental_groups = ro.r('experimental_groups')
+
+        topGenes_df1 = pd.DataFrame(topGenes_df1)
+        topGenes_df2 = pd.DataFrame(topGenes_df2)
 
         network_1_file = DE_GRN(tf1, topGenes_df1, outdir, case = "DE_DESeq2_and_NO_pb" )
         netmap_config['evaluation']['gene_1'] = tf1
