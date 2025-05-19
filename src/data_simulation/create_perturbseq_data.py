@@ -243,6 +243,12 @@ topGenes2 <- topTags(qlf2, n = net_size + 1)
 
 topGenes_df1 <- as.data.frame(topGenes1$table)
 topGenes_df2 <- as.data.frame(topGenes2$table)
+
+topGenes_df1$genes<-rownames(topGenes_df1)
+topGenes_df2$genes<-rownames(topGenes_df2)
+
+print(topGenes_df2)
+
 """
 
 DE_DESeq2_and_NO_pb_Rcode = """
@@ -292,6 +298,9 @@ topGenes_df2 <- topGenes_df2[order(abs(topGenes_df2$log2FoldChange), decreasing 
 # Select the top genes (net_size + 1) for each
 topGenes_df1 <- head(topGenes_df1, net_size + 1)
 topGenes_df2 <- head(topGenes_df2, net_size + 1)
+topGenes_df1$genes<-rownames(topGenes_df1)
+topGenes_df2$genes<-rownames(topGenes_df2)
+print(topGenes_df2)
 """
 
 def DE_GRN(TF, topGenes_df, outdir, case):
@@ -311,7 +320,7 @@ def DE_GRN(TF, topGenes_df, outdir, case):
 def create_subsets(perturbed, genes_of_interest, data_config, netmap_config, ctrl):
     subset_tracker = []
     counter = 0
-    while counter<10:
+    while counter<1:
         random_subset = np.random.choice(genes_of_interest, size=data_config['number_tfs'], replace=False)
         dirname = f"{'_'.join(random_subset)}"
         if sorted(random_subset) in subset_tracker:
@@ -393,9 +402,16 @@ def create_subsets(perturbed, genes_of_interest, data_config, netmap_config, ctr
         tf2= list(experimental_groups)[1].split("metadatasamples")[-1]
         #print(f"tf1: {tf1} and tf1: {tf2}")
         # END GET DE GRN
-        topGenes_df1 = pd.DataFrame(topGenes_df1)
-        topGenes_df2 = pd.DataFrame(topGenes_df2)
-        print(topGenes_df1.index)
+        topGenes_df1 = pd.DataFrame(topGenes_df1).T
+        topGenes_df2 = pd.DataFrame(topGenes_df2).T
+
+        topGenes_df2.columns = ['logFC', 'logCPM', 'F', 'PValue', 'FDR', 'genes']
+        topGenes_df1.columns = ['logFC', 'logCPM', 'F', 'PValue', 'FDR', 'genes']
+        
+        topGenes_df1.index = topGenes_df1.genes
+        topGenes_df2.index = topGenes_df2.genes
+
+        
 
         network_1_file = DE_GRN(tf1, topGenes_df1, outdir, case = "DE_edgeR_and_pb" )
         #netmap_config['evaluation'] = {}
@@ -423,8 +439,14 @@ def create_subsets(perturbed, genes_of_interest, data_config, netmap_config, ctr
         topGenes_df2 = ro.r('topGenes_df2')
         experimental_groups = ro.r('experimental_groups')
 
-        topGenes_df1 = pd.DataFrame(topGenes_df1)
-        topGenes_df2 = pd.DataFrame(topGenes_df2)
+        topGenes_df1 = pd.DataFrame(topGenes_df1).T
+        topGenes_df2 = pd.DataFrame(topGenes_df2).T
+
+        topGenes_df2.columns = ['baseMean', 'log2FoldChange', 'lfcSE', 'stat', 'pvalue', 'padj', 'genes']
+        topGenes_df1.columns = ['baseMean', 'log2FoldChange', 'lfcSE', 'stat', 'pvalue', 'padj', 'genes']
+        
+        topGenes_df1.index = topGenes_df1.genes
+        topGenes_df2.index = topGenes_df2.genes
 
         network_1_file = DE_GRN(tf1, topGenes_df1, outdir, case = "DE_DESeq2_and_NO_pb" )
         netmap_config['evaluation']['gene_1'] = tf1
@@ -437,8 +459,8 @@ def create_subsets(perturbed, genes_of_interest, data_config, netmap_config, ctr
         # Write the updated netmap config to file
         os.makedirs(data_config['netmap_configuration_dir'], exist_ok=True)
         config_file =  op.join(data_config['netmap_configuration_dir'], f"{dirname}.yaml")
-        netmap_config['data']['input_data'] = op.join(outdir, 'data.h5ad')
-        netmap_config['results']['output_directory'] = op.join(data_config['results_dir'], dirname )
+        netmap_config['input_data'] = op.join(outdir, 'data.h5ad')
+        netmap_config['output_directory'] = op.join(data_config['results_dir'], dirname)
         write_config(netmap_config, config_file)
     
     return adata_preprocessed, outdir
@@ -494,7 +516,7 @@ if __name__ == "__main__":
     # Intersect with the list of perturbed genes to get the list of relevant TFs
     uniquely_perturbed_tfs  = list(set(tfs[tfs['gene type'] == 'transcription factor'].iloc[:, 0]).intersection(set(uniquely_perturbed_genes)))
     
-    create_subsets(perturbed, genes_of_interest, data_config, netmap_config, ctrl )
+    create_subsets(perturbed, genes_of_interest, data_config, netmap_config, ctrl)
     
     
     
