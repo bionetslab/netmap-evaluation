@@ -1,0 +1,12 @@
+input_data: data.h5ad
+tf_only: false
+transcription_factors: /data_nfs/datasets/SCENIC_DB/tf_lists/allTFs_hg38.txt
+alpha: 0.01
+boxsize: 0.1
+c: null
+weighted: false
+filename: csnet
+format: .h5ad
+output_directory: csnet_results
+overwrite: true
+normalize: true

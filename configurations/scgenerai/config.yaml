@@ -1,0 +1,10 @@
+input_data: data.h5ad
+tf_only: true
+transcription_factors: /data_nfs/datasets/SCENIC_DB/tf_lists/allTFs_hg38.txt
+adata_filename: grn_lrp.h5ad
+grn: grn_lrp.tsv
+output_directory: scgenerai_results
+overwrite: true
+rerun: true
+split: false
+test_size: 0.3
