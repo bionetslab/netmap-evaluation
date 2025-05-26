@@ -1,61 +1,63 @@
-load_packages <- function() {
-    pkgs <- c("Seurat","SeuratData", "SeuratDisk","dplyr","Matrix","ggplot2","ggraph",
-            "scatterpie","ggrepel","ggpubr","igraph","optparse","yaml")
-    if(any(miss <- !pkgs %in% installed.packages()[,1]))
-        install.packages(pkgs[miss], repos = "https://cloud.r-project.org")
-    invisible(lapply(pkgs, library, character.only = TRUE))
+library(optparse)
+library(yaml)
+library(Seurat)
+library(SeuratDisk)
+library(dplyr)
+library(Matrix)
+library(ggplot2)
+library(ggraph)
+library(scatterpie)
+library(ggrepel)
+library(ggpubr)
+library(igraph)
 
-    # Source NeighbourNet (in develop)
-    source("tests/script.new.R")
+
+install_seuratdisk <- function() {
+  if (!requireNamespace("remotes", quietly = TRUE)) {
+    install.packages("remotes")
+  }
+  remotes::install_github("mojaveazure/seurat-disk")
 }
+source("~/netmap-evaluation/NeighbourNet/tests/script.new.R") #nolint
 
-run_neighbourNet <- function(config, dataset_config) {
+run_neighbournet <- function(config, dataset_config) {
+  # Load the dataset 
+  adatapath <- config$input_data
+  SeuratDisk::Convert(adatapath, dest = "h5seurat", overwrite = TRUE)
+  h5seurat_path <- sub("\\.h5ad$", ".h5seurat", adatapath)
+  obj <- SeuratDisk::LoadH5Seurat(h5seurat_path, verbose = FALSE)
 
-    # Load the dataset 
-    adatapath <- config$input_data
-    SeuratData::Convert(adatapath, dest = "h5seurat", overwrite = TRUE)
-    obj <- LoadH5Seurat(adatapath, verbose = FALSE)
+  # Load priors?
+  load("~/netmap-evaluation/NeighbourNet/data/gene.list.rda") #nolint
+  load("~/netmap-evaluation/NeighbourNet/data/sig.graph.rda") #nolint
+  load("~/netmap-evaluation/NeighbourNet/data/gr.graph.rda") #nolint
+  load("~/netmap-evaluation/NeighbourNet/data/receptor.ppr.rda") #nolint
 
+  # Preprocess
+  rt.ppr <- get.ppr()                        # receptor‑target prior matrix
+  genes  <- select.gene(obj, min.cells = 10) # QC → TF / target lists
 
-    # Preprocess
-    rt.ppr <- get.ppr()                        # receptor‑target prior matrix
-    genes  <- select.gene(obj, min.cells = 10) # QC → TF / target lists
-
-    obj <- obj |>
+  obj <- obj |>
     prepare.seurat(genes = genes$genes) |>   # scale + PCA
     prepare.graph() |>                       # 30‑NN graph
-    select.cell() |>                         # subsample 
+    select.cell() |>                         # subsample
     prepare.reg(predictors = genes$tfs,      # local variance scaffolding
                 responses  = genes$targets)
 
-    # Run NeighbourNet
-    responses <- genes$targets[1:10]       # for debugging/testing, delete later
-    obj <- run.nn.reg(obj, responses = responses, return.p.val = T)
-
+  # Run NeighbourNet
+  responses <- genes$targets[1:10]       # for debugging/testing, delete later
+  obj <- run.nn.reg(obj, responses = responses, return.p.val = TRUE)
+  results <- Misc(obj, "mod")
+  
+  obj2 <- build.meta.network(obj)
 }
 
-
-#### Main function to run the neighbourNet method
-#' @param config Path to the YAML configuration file
-#' @param dataset_config Path to the dataset configuration file
-
-load_packages()
-
+# Argument parsing
 option_list <- list(
-  make_option(
-    c("-c", "--config"),
-    type = "character",
-    default = NULL,
-    help = "Path to the YAML configuration file",
-    metavar = "FILE"
-  ),
-  make_option(
-    c("-d", "--dataset_config"),
-    type = "character",
-    default = NULL,
-    help = "Path to the dataset configuration file",
-    metavar = "FILE"
-  ),
+  make_option(c("-c", "--config"), type = "character",
+              help = "Path to the YAML configuration file", metavar = "FILE"),
+  make_option(c("-d", "--dataset_config"), type = "character",
+              help = "Path to the dataset configuration file", metavar = "FILE")
 )
 
 opt_parser <- OptionParser(option_list = option_list)
@@ -63,17 +65,12 @@ opt <- parse_args(opt_parser)
 
 if (is.null(opt$config)) {
   stop("Error: Please provide a YAML config file using the --config option.")
-}else if (is.null(opt$dataset_config)) {
-  stop("Error: Please provide a dataset config file using the --dataset_config option.")
+} else if (is.null(opt$dataset_config)) {
+  stop("Error: Please provide a dataset config file using the --dataset_config option.") # nolint
 }
-
-config <- yaml.load_file(opt$config)
-dataset_config <- yaml.load_file(opt$dataset_config)
-
-if (TRUE){
-  # For testing purposes, load the config files directly
-  config <- yaml::read_yaml("/nfs/home/students/t.reim/netmap-evaluation/configurations/neighbourNet/nnet_config.yaml")
-  dataset_config <- yaml::read_yaml("/nfs/home/students/t.reim/netmap-evaluation/configurations/data_simulation/config_easy/net_111_1235_net_134_50388_net_158_1603.config.yaml")
-}
+# config <- yaml::read_yaml("~/netmap-evaluation/configurations/neighbourNet/nnet_config.yaml") #nolint
+# dataset_config <- yaml::read_yaml("~/netmap-evaluation/configurations/data_simulation/config_easy.yaml") #nolint
+config <- yaml::read_yaml(opt$config)
+dataset_config <- yaml::read_yaml(opt$dataset_config)
 
 run_neighbourNet(config, dataset_config)
