@@ -1,0 +1,4 @@
+input_data: /nfs/home/students/t.reim/netmap-evaluation/data/simulated_data/config_easy/net_111_1235_net_134_50388_net_158_1603/data.h5ad
+metadata: /nfs/home/students/t.reim/netmap-evaluation/data/simulated_data/config_easy/net_111_1235_net_134_50388_net_158_1603/metadata.tsv
+net: /nfs/home/students/t.reim/netmap-evaluation/data/simulated_data/config_easy/net_111_1235_net_134_50388_net_158_1603/net.tsv
+gex: /nfs/home/students/t.reim/netmap-evaluation/data/simulated_data/config_easy/net_111_1235_net_134_50388_net_158_1603/gex.tsv

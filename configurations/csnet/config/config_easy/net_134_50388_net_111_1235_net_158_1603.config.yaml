@@ -1,0 +1,12 @@
+input_data: /nfs/home/students/t.reim/netmap-evaluation/data/simulated_data/config_easy/net_134_50388_net_111_1235_net_158_1603/data.h5ad
+tf_only: false
+transcription_factors: /data_nfs/datasets/SCENIC_DB/tf_lists/allTFs_hg38.txt
+alpha: 0.01
+boxsize: 0.1
+c: null
+weighted: false
+filename: csnet
+format: .h5ad
+output_directory: /nfs/home/students/t.reim/netmap-evaluation/results/csnet/config/config_easy/net_134_50388_net_111_1235_net_158_1603
+overwrite: true
+normalize: true

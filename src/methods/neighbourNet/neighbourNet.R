@@ -11,9 +11,9 @@ load_packages <- function() {
 
 run_neighbourNet <- function(config, dataset_config) {
 
-    # Load the dataset
+    # Load the dataset 
     adatapath <- config$input_data
-    Convert(adatapath, dest = "h5seurat", overwrite = TRUE)
+    SeuratData::Convert(adatapath, dest = "h5seurat", overwrite = TRUE)
     obj <- LoadH5Seurat(adatapath, verbose = FALSE)
 
 
@@ -69,5 +69,11 @@ if (is.null(opt$config)) {
 
 config <- yaml.load_file(opt$config)
 dataset_config <- yaml.load_file(opt$dataset_config)
+
+if (TRUE){
+  # For testing purposes, load the config files directly
+  config <- yaml::read_yaml("/nfs/home/students/t.reim/netmap-evaluation/configurations/neighbourNet/nnet_config.yaml")
+  dataset_config <- yaml::read_yaml("/nfs/home/students/t.reim/netmap-evaluation/configurations/data_simulation/config_easy/net_111_1235_net_134_50388_net_158_1603.config.yaml")
+}
 
 run_neighbourNet(config, dataset_config)

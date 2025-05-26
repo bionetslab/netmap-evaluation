@@ -1,0 +1,17 @@
+edgelist:
+- net_134_50388/edges.tsv
+- net_111_1235/edges.tsv
+nodelist:
+- net_134_50388/nodes.tsv
+- net_111_1235/nodes.tsv
+common_edges:
+- net_158_1603/edges.tsv
+common_nodes:
+- net_158_1603/nodes.tsv
+n_cells: 1000
+n_celltypes: 2
+seed: 11
+base_effect: standard-normal
+mean: 2.5
+sd: 1
+dataset_id: net_134_50388_net_111_1235_net_158_1603
