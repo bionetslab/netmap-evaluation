@@ -54,7 +54,7 @@ run_neighbournet <- function(config, dataset_config) {
 
   outpath <- paste0(outdir, "/nnet_results.h5seurat")
   SeuratDisk::SaveH5Seurat(obj, filename = outpath, overwrite = TRUE)
-  SeuratDisk::Convert(config$reults_dir, dest = "h5ad", overwrite = TRUE)
+  SeuratDisk::Convert(outpath, dest = "h5ad", overwrite = TRUE)
 }
 
 # Argument parsing
