@@ -23,6 +23,7 @@ source("~/netmap-evaluation/NeighbourNet/tests/script.new.R") #nolint
 run_neighbournet <- function(config, dataset_config) {
   # Load the dataset 
   adatapath <- config$input_data
+  outdir <- config$output_directory
   SeuratDisk::Convert(adatapath, dest = "h5seurat", overwrite = TRUE)
   h5seurat_path <- sub("\\.h5ad$", ".h5seurat", adatapath)
   obj <- SeuratDisk::LoadH5Seurat(h5seurat_path, verbose = FALSE)
@@ -40,16 +41,20 @@ run_neighbournet <- function(config, dataset_config) {
   obj <- obj |>
     prepare.seurat(genes = genes$genes) |>   # scale + PCA
     prepare.graph() |>                       # 30‑NN graph
-    select.cell() |>                         # subsample
+    select.cell(all=TRUE) |>                         # subsample
     prepare.reg(predictors = genes$tfs,      # local variance scaffolding
                 responses  = genes$targets)
 
   # Run NeighbourNet
-  responses <- genes$targets[1:10]       # for debugging/testing, delete later
-  obj <- run.nn.reg(obj, responses = responses, return.p.val = TRUE)
+  responses <- genes$targets 
+  obj <- run.nn.reg(obj, responses = responses, prune=FALSE, return.p.val = TRUE) # nolint
   results <- Misc(obj, "mod")
   
-  obj2 <- build.meta.network(obj)
+  obj <- build.meta.network(obj)
+
+  outpath <- paste0(outdir, "/nnet_results.h5seurat")
+  SeuratDisk::SaveH5Seurat(obj, filename = outpath, overwrite = TRUE)
+  SeuratDisk::Convert(config$reults_dir, dest = "h5ad", overwrite = TRUE)
 }
 
 # Argument parsing
