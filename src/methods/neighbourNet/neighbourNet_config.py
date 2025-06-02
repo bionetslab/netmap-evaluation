@@ -4,16 +4,9 @@ import yaml
 import os
 
 @dataclass
-class ScGeneRAIConfig:
+class NeighbourNetConfig:
     input_data: str
-    tf_only: bool = False
-    transcription_factors: Optional[str] = None
-    adata_filename: str =  "grn_lrp.h5ad"
-    grn: str = "grn_lrp.tsv"
-    output_directory: str = "nnet_results"
-    overwrite: bool  = True
-    rerun: bool = True
-    split: bool = False
+    output_directory: str
 
     @classmethod
     def read_yaml(cls, yaml_file):

@@ -12,6 +12,7 @@ sys.path.append('/nfs/home/students/t.reim/netmap-evaluation')
 from src.methods.csnet.csnet_config import CsNetConfig
 from src.methods.scgenerai.scgenerai_config import ScGeneRAIConfig
 from src.data_simulation.data_simulation_config import DataSimulationConfig
+from src.methods.neighbourNet.neighbourNet_config import NeighbourNetConfig
 
 @dataclass
 class PipelineConfig:
@@ -29,6 +30,7 @@ class PipelineConfig:
     netmap_config_dir: str
     csnet_config_dir: str
     scgenerai_config_dir: str
+    nnet_config_dir: str
     
 
 
@@ -36,6 +38,7 @@ class PipelineConfig:
     netmap_base_configs: List[str] = field(default_factory=list)
     csnet_base_configs: List[str] = field(default_factory=list)
     scgenerai_base_configs: List[str] = field(default_factory=list)
+    nnet_base_configs: List[str] = field(default_factory=list)
 
 
     @classmethod
@@ -258,6 +261,37 @@ if __name__ == "__main__":
                 print(netmap_call)
                 outfile = f"{op.join(data_simulation_configs[net]['scgenerai'][netmap_trial]['result'], 'config.yaml')}"
                 pm.run(netmap_call, outfile )
+    
+    
+    
+    # STEP 6: NEIGHBOURNET RUN
+    # Create all config files for NeighbourNet run
+    for net in data_simulation_configs:
+        for c in pipeline_config.nnet_base_configs:
+            netmap_trial = op.basename(c).replace('.yaml', '')
+            nnet_config = NeighbourNetConfig.read_yaml(yaml_file=c)
+
+            for data_trial in data_simulation_configs[net]['data_simulation']['configs']:
+                config_dir = op.join(pipeline_config.nnet_config_dir, netmap_trial, data_trial)
+                os.makedirs(config_dir, exist_ok=True)                
+                
+                # add information to trial tracker
+                netmap_config_path = op.join(config_dir, f"{net}.config.yaml")
+                nnet_config.output_directory =  op.join(pipeline_config.result_folder, 'nnet', netmap_trial, data_trial, net)
+                data_simulation_configs = pipeline_update_tool_info(data_simulation_configs, netmap_config_path, nnet_config.output_directory, data_trial, net, 'nnet')
+
+                # update config path with input data
+                nnet_config.input_data =  op.join(data_simulation_configs[net]['data_simulation']['data_path'][data_trial], 'data.h5ad')
+                nnet_config.write_yaml(netmap_config_path)
+
+
+    for net in data_simulation_configs:
+        for netmap_trial in data_simulation_configs[net]['nnet']:
+                netmap_call = f"Rscript ~/netmap-evaluation/src/methods/neighbourNet/neighbourNet.R --config {data_simulation_configs[net]['nnet'][netmap_trial]['config']} --dataset_config {data_simulation_configs[net]['data_simulation']['configs'][netmap_trial]}" 
+                print(netmap_call)
+                outfile = f"{op.join(data_simulation_configs[net]['nnet'][netmap_trial]['result'], 'config.yaml')}"
+                pm.run(netmap_call, outfile )
+    
 
 
 
