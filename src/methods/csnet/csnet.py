@@ -7,9 +7,18 @@ import pandas as pd
 import anndata
 from csnet_config import CsNetConfig
 import os
+import time 
+import sys
+
+import itertools
+
+sys.path.append('/data_nfs/og86asub/netmap/netmap-evaluation/')
+
+from src.utils import write_config, split_index
 
 def run_csndm(config):
 
+    start = time.monotonic()
     ## Load config and setup outputs
 
     os.makedirs(config.output_directory, exist_ok = True)
@@ -23,7 +32,7 @@ def run_csndm(config):
     data = adata.X.T # because rows = genes and columns = cells (for this method)
 
     #### CSNDM method ###
-  
+    start_method = time.monotonic()
     n1, n2 = data.shape
 
     # Defining upper and lower neighborhood bounds for gene expression values
@@ -55,6 +64,8 @@ def run_csndm(config):
     ndm = np.zeros((n1, n2))
     p = -norm.ppf(config.alpha)
 
+    collect_networks = []
+    collect_significance = []
     # Construct a cell-specific network for each cell
     for k in range(n2):
         # Check if gene expression values fall within the upper and lower neighborhood
@@ -66,11 +77,14 @@ def run_csndm(config):
         aaT = np.dot(a, a.T)
         denom = np.sqrt((aaT * ((n2 - a) @ (n2 - a).T)) / (n2 - 1) + np.finfo(float).eps)
         csn = (np.dot(B, B.T) * n2 - aaT) / denom
-        csn = csn > p
-
+        csn_p = csn > p
         # Degree = number of edges per gene (excluding self-connections)
-        ndm[:, k] = np.sum(csn, axis=1) - np.diag(csn)
-        #print(f"Cell {k+1} is completed")
+        ndm[:, k] = np.sum(csn, axis=1) - np.diag(csn_p)
+        print(f"Cell {k+1} is completed")
+
+        collect_networks.append(csn.flatten())
+        collect_significance.append(csn_p.flatten())
+
 
     if config.normalize:
         ndm_sum = np.sum(ndm, axis=0, keepdims=True)
@@ -78,28 +92,48 @@ def run_csndm(config):
         mean_sum = np.mean(np.sum(np.sign(ndm), axis=0))
         ndm *= (mean_sum ** 2) / 2000 #  c=2000 (constant)
 
-    if config.format ==".tsv":
-        # Create column names
-        row_names = [f"G{i}" for i in range(data.shape[0])]
-        df = pd.DataFrame(ndm, columns=[f"Cell_{i}" for i in range(data.shape[1])], index=row_names)
+    time_method = time.monotonic()-start_method
 
-        # Save as TSV file 
-        df.to_csv(op.join(op.join(config.output_directory),config.filename+'.tsv'), sep='\t', index=True, header=True)
-        
-    else:
-        # Create a sparse matrix 
-        sparse_data = csr_matrix(ndm)
-        
-        # Create AnnData object
-        adata = anndata.AnnData(X=sparse_data)
+    # Make anndata object, set all non-significant edges to 0
+    csn_adata = anndata.AnnData(np.stack(collect_networks))
+    csn_adata.layers['significance'] = np.stack(collect_significance)
 
-        # Add cell and gene names
-        adata.obs_names =  [f"G{i}" for i in range(data.shape[0])] # Gene names
-        adata.var_names = [f"Cell_{i}" for i in range(data.shape[1])]  # Cell names
+    csn_adata.X[~csn_adata.layers['significance']] = 0
+    csn_adata.X = csr_matrix(csn_adata.X)
 
-        # Save as .h5ad file
-        adata.write(op.join(op.join(config.output_directory),config.filename+".h5ad"))
+    # adge and var names.
+    edgenames = []
+    for i in itertools.product(adata.var['genes'], adata.var['genes']):
+        edgenames.append(f"{i[0]}_{i[1]}")
+    edgenames = pd.DataFrame({'edge': edgenames})
 
+    edgenames = edgenames.set_index('edge')
+
+    csn_adata.var = edgenames
+    csn_adata.obs = adata.obs
+    
+    # Subet to edges which have at least one value
+    csn_adata = csn_adata[:, csn_adata.layers['significance'].sum(axis = 0)!= 0].copy()
+    csn_adata = split_index(csn_adata)
+
+    csn_adata.write(op.join(op.join(config.output_directory),config.filename+".csn.h5ad"))
+
+
+    # Create a sparse matrix (NMD)
+    sparse_data = csr_matrix(ndm)
+    # Create AnnData object in the normal orientation
+    adata_nmd = anndata.AnnData(X=sparse_data.T)
+
+    # Add cell and gene names
+    adata_nmd.obs =  adata.obs # Gene names
+    adata_nmd.var = adata.var  # Cell names
+
+    # Save as .h5ad file
+    adata_nmd.write(op.join(op.join(config.output_directory),config.filename+".nmd.h5ad"))
+
+
+    time_elapsed = time.monotonic()-start
+    write_config({'time_elapsed_total': time_elapsed, 'time_elapsed_csnet': time_method}, file=op.join(config.output_directory, 'results.yaml'))
     return ndm
 
 

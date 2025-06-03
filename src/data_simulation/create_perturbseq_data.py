@@ -36,9 +36,6 @@ def check_missing(adata, gene_list):
 def preprocess_anndata(adata, ntop=2000):
     """Preprocess the AnnData object."""
     adata.var_names_make_unique()
-    adata.raw = adata.copy()
-    if adata.raw is None:  # Check if raw is not already set
-        raise ValueError("adata.raw is None. Please assign raw counts to adata.raw before proceeding.")
     
     # Annotate mitochondrial genes
     adata.var["mt"] = adata.var_names.str.startswith("MT-")
@@ -50,8 +47,12 @@ def preprocess_anndata(adata, ntop=2000):
     adata = adata[adata.obs.n_genes_by_counts < 6000, :]
     adata = adata[adata.obs.pct_counts_mt < 20, :].copy()
 
+
     sc.pp.filter_cells(adata, min_genes=200)
     sc.pp.filter_genes(adata, min_cells=10)
+
+    #Store raw counts
+    adata.layers['counts'] = adata.X
 
     # Normalize and log-transform the data
     sc.pp.normalize_total(adata, target_sum=1e4)
@@ -60,7 +61,7 @@ def preprocess_anndata(adata, ntop=2000):
     # Identify highly variable genes
     #print(adata)
     sc.pp.highly_variable_genes(adata, n_top_genes=ntop, flavor='seurat')
-    adata = adata[:, adata.var.highly_variable]
+    adata = adata[:, adata.var.highly_variable].copy()
 
     # Scale the data
     sc.pp.scale(adata, max_value=10)
@@ -317,24 +318,21 @@ def DE_GRN(TF, topGenes_df, outdir, case):
     network_df.to_csv(filename, index=False) 
     return filename
     
-def create_subsets(perturbed, genes_of_interest, data_config, netmap_config, ctrl):
+def create_subsets(perturbed, genes_of_interest, data_config, ctrl, n_datasets=1):
     subset_tracker = []
     counter = 0
-    while counter<1:
+    while counter< n_datasets:
         random_subset = np.random.choice(genes_of_interest, size=data_config['number_tfs'], replace=False)
         dirname = f"{'_'.join(random_subset)}"
         if sorted(random_subset) in subset_tracker:
             continue
-        print(dirname)
+
         counter+=1
         subset_tracker.append(sorted(random_subset))
         adata_preprocessed = get_subset(perturbed, random_subset)
         outdir = op.join(data_config['output_data_dir'], dirname)
-        os.makedirs(outdir, exist_ok=True)
         
-        if adata_preprocessed.raw is None:  # Check if raw is not already set
-            raise ValueError("adata.raw is None. Please assign raw counts to adata.raw before proceeding.")
-            
+        os.makedirs(outdir, exist_ok=True)
         adata_preprocessed.write_h5ad(op.join(outdir, 'data.h5ad'))
 
         # SAVE NETWORK DATA
@@ -367,15 +365,18 @@ def create_subsets(perturbed, genes_of_interest, data_config, netmap_config, ctr
         topGenes_df2 = pd.DataFrame(l2, columns=['Gene'], index=l2)
         #print(topGenes_df2)
 
+        instance_config = {}
+
         tf1 = groups_[:1][0]
         network_1_file = DE_GRN(tf1, topGenes_df1, outdir, case = "wilcoxon_no_pb" )
-        netmap_config['evaluation'] = {}
-        netmap_config['evaluation']['gene_1'] = tf1
-        netmap_config['evaluation']['network_1_0'] = network_1_file
+        
+        instance_config['perturbed_genes'] = [tf1]
+        instance_config['edgelist'] = [network_1_file]
         tf2 = groups_[1:][0]
         network_2_file = DE_GRN(tf2, topGenes_df2, outdir, case = "wilcoxon_no_pb")
-        netmap_config['evaluation']['gene_2'] = tf2
-        netmap_config['evaluation']['network_2_0'] = network_2_file
+        instance_config['perturbed_genes'].append(tf2)
+        instance_config['edgelist'].append(network_2_file)
+
 
         
         # GET DE GRN DE_DESeq2_and_NO_pb
@@ -415,12 +416,10 @@ def create_subsets(perturbed, genes_of_interest, data_config, netmap_config, ctr
 
         network_1_file = DE_GRN(tf1, topGenes_df1, outdir, case = "DE_edgeR_and_pb" )
         #netmap_config['evaluation'] = {}
-        netmap_config['evaluation']['gene_1'] = tf1
-        netmap_config['evaluation']['network_1_1'] = network_1_file
+        instance_config['edgelist_1'] = [network_1_file]
         
         network_2_file = DE_GRN(tf2, topGenes_df2, outdir, case = "DE_edgeR_and_pb")
-        netmap_config['evaluation']['gene_2'] = tf2
-        netmap_config['evaluation']['network_2_1'] = network_2_file
+        instance_config['edgelist_1'].append(network_2_file)
 
         # GET DE GRN DE_DESeq2_and_NO_pb
         #print(adata_networks)
@@ -449,19 +448,15 @@ def create_subsets(perturbed, genes_of_interest, data_config, netmap_config, ctr
         topGenes_df2.index = topGenes_df2.genes
 
         network_1_file = DE_GRN(tf1, topGenes_df1, outdir, case = "DE_DESeq2_and_NO_pb" )
-        netmap_config['evaluation']['gene_1'] = tf1
-        netmap_config['evaluation']['network_1_2'] = network_1_file
+        instance_config['edgelist_2'] = [network_1_file]
         network_2_file = DE_GRN(tf2, topGenes_df2, outdir, case = "DE_DESeq2_and_NO_pb")
-        netmap_config['evaluation']['gene_2'] = tf2
-        netmap_config['evaluation']['network_2_2'] = network_2_file
+        instance_config['edgelist_2'].append(network_2_file)
 
+        # Write the updated data config to file
+        os.makedirs(op.join(data_config['perturb_seq_config_dir']),  exist_ok=True)
+        config_file =  op.join(data_config['perturb_seq_config_dir'], f"{dirname}.config.yaml")
+        write_config(instance_config, config_file)
 
-        # Write the updated netmap config to file
-        os.makedirs(data_config['netmap_configuration_dir'], exist_ok=True)
-        config_file =  op.join(data_config['netmap_configuration_dir'], f"{dirname}.yaml")
-        netmap_config['input_data'] = op.join(outdir, 'data.h5ad')
-        netmap_config['output_directory'] = op.join(data_config['results_dir'], dirname)
-        write_config(netmap_config, config_file)
     
     return adata_preprocessed, outdir
 
@@ -499,8 +494,6 @@ if __name__ == "__main__":
     ctrl, perturbed = load_anndata(data_config['data_path'])
     tfs = pd.read_csv(data_config['tf_file'], sep = '\t')
 
-    netmap_config = read_config(data_config['netmap_base_config'])
-
 
     uniquely_perturbed_genes = perturbed.obs['gene_1'].unique()
     # Stable perturbations according to UMAP representation in paper
@@ -516,7 +509,7 @@ if __name__ == "__main__":
     # Intersect with the list of perturbed genes to get the list of relevant TFs
     uniquely_perturbed_tfs  = list(set(tfs[tfs['gene type'] == 'transcription factor'].iloc[:, 0]).intersection(set(uniquely_perturbed_genes)))
     
-    create_subsets(perturbed, genes_of_interest, data_config, netmap_config, ctrl)
+    create_subsets(perturbed, genes_of_interest, data_config, ctrl)
     
     
     

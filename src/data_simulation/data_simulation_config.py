@@ -16,6 +16,9 @@ class DataSimulationConfig:
     mean: Optional[float] = None
     sd: Optional[float] = None
     dataset_id: Optional[str] = None
+    edgelist_1: List[str] = None  
+    edgelist_2: List[str] = None 
+    perturbed_genes: List[str] =  None
 
     @classmethod
     def read_yaml(cls, yaml_file):

@@ -1,8 +1,7 @@
 number_tfs: 2
 net_size: 100
-output_data_dir: '/data_nfs/og86asub/netmap/netmap-evaluation/data/perturb_seq'
-netmap_configuration_dir: '/data_nfs/og86asub/netmap/netmap-evaluation/configurations/perturb_seq'
+output_data_dir: '/data_nfs/og86asub/netmap/netmap-evaluation/data/perturb_seq_subsets'
+perturb_seq_config_dir: '/data_nfs/og86asub/netmap/netmap-evaluation/results/configurations/perturb_seq'
 results_dir: '/data_nfs/og86asub/netmap/netmap-evaluation/results/perturb_seq/'
 data_path: '/data_nfs/og86asub/netmap/netmap-evaluation/data/perturb_seq/perterb-seq-main-raw.h5ad'
 tf_file: '/data_nfs/og86asub/netmap/netmap-evaluation/data/perturb_seq/gene_annotation.tsv'
-netmap_base_config: /data_nfs/og86asub/netmap/netmap-evaluation/configurations/netmap/config.yaml

@@ -27,10 +27,6 @@ sys.path.append('/data_nfs/og86asub/netmap/netmap-evaluation/')
 from netmap.src.utils.data_utils import *
 from netmap.src.utils.tf_utils import *
 
-### Internal imports
-sys.path.append('/data_nfs/og86asub/netmap/NetMap_LRP')
-
-
 
 from src.methods.scgenerai.scgenerai_config import ScGeneRAIConfig
 from src.data_simulation.data_simulation_config import DataSimulationConfig
@@ -39,20 +35,26 @@ from src.data_simulation.data_simulation_config import DataSimulationConfig
 sys.path.append('/data_nfs/og86asub/netmap/scGeneRAI')
 from scGeneRAI import scGeneRAI
 
-def run_scgenerai(config, dataset_config):
+from src.utils import write_config, split_index
 
-    config.write_yaml(yaml_file=op.join(config.output_directory, 'config.yaml'))
+
+def run_scgenerai(config):
+
+    start_total = time.monotonic()
     
 
+    ## Load config and setup outputs
+    os.makedirs(config.output_directory, exist_ok=True)
+    sc.settings.figdir = config.output_directory
+    
     #setup temp dir for scGeneRAI to save results
     temp_dir = op.join(config.output_directory, 'tmp')
     if not os.path.exists(temp_dir):
         os.makedirs(temp_dir)
     os.environ['scGeneRAI_TEMPDIR'] = temp_dir
 
-    ## Load config and setup outputs
-    os.makedirs(config.output_directory, exist_ok=True)
-    sc.settings.figdir = config.output_directory
+
+    config.write_yaml(yaml_file=op.join(config.output_directory, 'config.yaml'))
 
     rerun = config.rerun
     split = config.split
@@ -96,7 +98,8 @@ def run_scgenerai(config, dataset_config):
         
         model.predict_networks(data_test_df, descriptors = None, LRPau = True, remove_descriptors = True, device_name = device, PATH = temp_dir)
 
-        print(f'Elapsed time: {time.monotonic()-start}')
+        model_time = time.monotonic()-start
+        print(f'Elapsed time: {model_time}')
 
     res_files = os.listdir(op.join(temp_dir, 'results'))
     #res_data = pd.concat([pd.read_csv(temp_dir + '/results/' + res_file) for res_file in res_files])
@@ -115,7 +118,12 @@ def run_scgenerai(config, dataset_config):
     varnames =  [f'{str(x[0])}_{str(x[1])}' for x in np.array(nl)]
     grn_adata = attribution_to_anndata(aa, obs = adata.obs)
     grn_adata.var.index = np.array(varnames)
+    grn_adata = split_index(grn_adata)
     grn_adata.write_h5ad(op.join(config.output_directory,config.adata_filename))
+
+
+    time_elapsed_total = time.monotonic()-start_total
+    write_config({'time_elapsed_total': time_elapsed_total, 'time_elapsed_scgenerai': model_time}, file=op.join(config.output_directory, 'results.yaml'))
 
     # ## Run one round of 
     # grn_adata = d.downstream_recipe(grn_adata)
@@ -197,4 +205,4 @@ if __name__ == "__main__":
     dataset_config = DataSimulationConfig.read_yaml(args.dataset_config)
 
     
-    run_scgenerai(config, dataset_config)
+    run_scgenerai(config)
