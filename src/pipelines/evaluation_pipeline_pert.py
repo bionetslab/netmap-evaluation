@@ -13,45 +13,9 @@ from src.methods.csnet.csnet_config import CsNetConfig
 from src.methods.scgenerai.scgenerai_config import ScGeneRAIConfig
 from src.data_simulation.data_simulation_config import DataSimulationConfig
 from netmap.src.utils.netmap_config import NetmapConfig
+from utils import PipelineConfig
 
-@dataclass
-class PipelineConfig:
-    basedir: str
-    outfolder: str
-    image_dir: str
-    r_script_dir: str
-    network_module_config: str
-    number_test_modules: int
-    input_network_dir: str
-    clustered_network_dir: str
-    simulated_data_dir: str
-    simulated_data_config_dir: str
-    result_folder: str
-    netmap_config_dir: str
-    csnet_config_dir: str
-    scgenerai_config_dir: str
-    perturb_seq_config_dir: str
-    perturb_seq_subset_dir: str
-
-
-
-    data_simulation_base_configs: List[str] = field(default_factory=list)
-    netmap_base_configs: List[str] = field(default_factory=list)
-    csnet_base_configs: List[str] = field(default_factory=list)
-    scgenerai_base_configs: List[str] = field(default_factory=list)
-    perturb_seq_base_configs: List[str] = field(default_factory=list)
-
-
-    @classmethod
-    def read_yaml(cls, yaml_file):
-        with open(yaml_file, 'r') as f:
-            data = yaml.safe_load(f)
-        return cls(**data)
-
-
-def write_config(c, file):
-    with open(file, "w") as handle:
-        yaml.safe_dump(c, handle)  
+from src.utils import write_config
 
 
 
@@ -247,6 +211,20 @@ if __name__ == "__main__":
 
 
     write_config(data_simulation_configs, file=op.join(pipeline_config.outfolder, 'all_tests.yaml'))
+
+    # STEP 6. EVALUATE RESULTS
+    for net in data_simulation_configs:
+        # take any data simulation trial
+        for netmap_trial in data_simulation_configs[net]['scgenerai']:
+                eval_call = f"python src/evaluation/compute_metrics.py \
+                --scgenerai_config {data_simulation_configs[net]['scgenerai'][netmap_trial]['config']} \
+                --netmap_config {data_simulation_configs[net]['netmap'][netmap_trial]['config']} \
+                --csnet_config {data_simulation_configs[net]['csnet'][netmap_trial]['config']} \
+                --dataset_config {data_simulation_configs[net]['data_simulation']['configs'][netmap_trial]} \
+                --pipeline_config {config_file}" 
+                print(eval_call)
+                outfile = f"{op.join(pipeline_config.summary_output_dir, net, 'results.yaml')}"
+                pm.run(eval_call, outfile )
 
     pm.stop_pipeline()
 

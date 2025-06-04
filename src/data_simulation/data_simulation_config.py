@@ -19,6 +19,8 @@ class DataSimulationConfig:
     edgelist_1: List[str] = None  
     edgelist_2: List[str] = None 
     perturbed_genes: List[str] =  None
+    separator: str = '\t'
+    group_key: str = 'grn'
 
     @classmethod
     def read_yaml(cls, yaml_file):

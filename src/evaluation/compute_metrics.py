@@ -161,14 +161,14 @@ def build_augmented_network(net):
     return augmented_net
 
 
-def compute_metrics(grn_ads, nets):
+def compute_metrics(grn_ads, nets, group_key='grn'):
     collect_results = {}
     for method in grn_ads:
         print(method)
         try:
             collect_results[method] = compute_egde_overlaps_simple(grn_ads[method], nets)
             grn_ads[method] = process(grn_ads[method])
-            grn_ads[method], grn_ads[method], score = unify_group_labelling(grn_ads[method], grn_ads[method], 'grn', 'spectral')
+            grn_ads[method], grn_ads[method], score = unify_group_labelling(grn_ads[method], grn_ads[method], group_key, 'spectral')
             collect_results[method]['clustering_score'] = float(score)
         except FileNotFoundError:
             collect_results[method] = 'no data'
@@ -239,8 +239,10 @@ if  __name__ == '__main__':
 
 
     # read network files
-    nets = [(op.basename(op.dirname(filename)), pd.read_csv(op.join(pipeline_config.clustered_network_dir, filename), sep='\t')) for filename in dataset_config.edgelist]
+    
+    nets = [(op.basename(op.dirname(filename)), pd.read_csv(op.join(pipeline_config.clustered_network_dir, filename), sep=dataset_config.separator)) for filename in dataset_config.edgelist]
 
+    print(nets)
     # Augmented net contains edges between genes which are controlled by the same transcription factor
     augmented_nets = [(net[0], build_augmented_network(net[1])) for net in nets]
 
@@ -265,7 +267,7 @@ if  __name__ == '__main__':
         print('Ntmap not found')
 
 
-    collect_results = compute_metrics(grn_ads=grn_ads, nets= nets)
+    collect_results = compute_metrics(grn_ads=grn_ads, nets= nets, group_key=dataset_config.group_key)
 
     outdir = op.join(pipeline_config.summary_output_dir, dataset_config.dataset_id)
     os.makedirs(outdir, exist_ok = True)

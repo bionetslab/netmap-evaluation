@@ -1,4 +1,5 @@
 input_data: /data_nfs/og86asub/netmap/NetMap_LRP/benchmark/data/simulated_data/config_ro/net_51_5864/data.h5ad
+layer: 'counts'
 transcription_factors: /data_nfs/datasets/SCENIC_DB/tf_lists/allTFs_hg38.txt
 tf_only: false
 penalize_error: true
