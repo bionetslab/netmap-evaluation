@@ -5,3 +5,4 @@ perturb_seq_config_dir: '/data_nfs/og86asub/netmap/netmap-evaluation/results/con
 results_dir: '/data_nfs/og86asub/netmap/netmap-evaluation/results/perturb_seq/'
 data_path: '/data_nfs/og86asub/netmap/netmap-evaluation/data/perturb_seq/perterb-seq-main-raw.h5ad'
 tf_file: '/data_nfs/og86asub/netmap/netmap-evaluation/data/perturb_seq/gene_annotation.tsv'
+n_datasets: 10

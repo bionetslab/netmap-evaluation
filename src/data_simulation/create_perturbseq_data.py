@@ -9,9 +9,9 @@ import os.path as op
 import os
 import anndata
 import rpy2.robjects as ro
-import rpy2.robjects.pandas2ri as pandas2ri
-pandas2ri.activate()
-warnings.filterwarnings('ignore')
+from rpy2.robjects.packages import importr
+from rpy2.robjects import pandas2ri
+
 from sklearn.metrics import *
 import itertools as itert
 import sys
@@ -386,8 +386,15 @@ def create_subsets(perturbed, genes_of_interest, data_config, ctrl, n_datasets=1
         pb = pb.T
         #print(f"class pb:{type(pb)}")
         #print(pb.dtypes)
-        ro.r.assign('pb', pandas2ri.py2rpy(pb))
-        ro.r.assign('md', pandas2ri.py2rpy(md))
+
+        with (ro.default_converter + pandas2ri.converter).context():
+            pb_r = ro.conversion.get_conversion().py2rpy(pb)
+
+        with (ro.default_converter + pandas2ri.converter).context():
+            md_r = ro.conversion.get_conversion().py2rpy(md)    
+            
+        ro.r.assign('pb', pb_r)
+        ro.r.assign('md', md_r)
         ro.r.assign('net_size', data_config['net_size'])
 
         print("runing DE_edgeR_and_pb_Rcode")
@@ -429,10 +436,18 @@ def create_subsets(perturbed, genes_of_interest, data_config, ctrl, n_datasets=1
         # Extract metadata
         meta_data = adata_networks.obs  
         meta_data = meta_data[['cell_type']]  
-
-        ro.r.assign('meta_data', pandas2ri.py2rpy(meta_data))
         raw_counts = raw_counts.T
-        ro.r.assign('raw_counts', pandas2ri.py2rpy(raw_counts))
+
+        
+        with (ro.default_converter + pandas2ri.converter).context():
+            raw_counts_r = ro.conversion.get_conversion().py2rpy(raw_counts)
+
+        with (ro.default_converter + pandas2ri.converter).context():
+            meta_data_r = ro.conversion.get_conversion().py2rpy(meta_data)    
+            
+
+        ro.r.assign('meta_data', meta_data_r)
+        ro.r.assign('raw_counts', raw_counts_r)
         ro.r(DE_DESeq2_and_NO_pb_Rcode)
         topGenes_df1 = ro.r('topGenes_df1')
         topGenes_df2 = ro.r('topGenes_df2')
@@ -451,6 +466,10 @@ def create_subsets(perturbed, genes_of_interest, data_config, ctrl, n_datasets=1
         instance_config['edgelist_2'] = [network_1_file]
         network_2_file = DE_GRN(tf2, topGenes_df2, outdir, case = "DE_DESeq2_and_NO_pb")
         instance_config['edgelist_2'].append(network_2_file)
+
+        instance_config['dataset_id'] = dirname
+        instance_config['separator'] = ','
+        instance_config['group_key'] = 'guide_identity'
 
         # Write the updated data config to file
         os.makedirs(op.join(data_config['perturb_seq_config_dir']),  exist_ok=True)
@@ -509,7 +528,7 @@ if __name__ == "__main__":
     # Intersect with the list of perturbed genes to get the list of relevant TFs
     uniquely_perturbed_tfs  = list(set(tfs[tfs['gene type'] == 'transcription factor'].iloc[:, 0]).intersection(set(uniquely_perturbed_genes)))
     
-    create_subsets(perturbed, genes_of_interest, data_config, ctrl)
+    create_subsets(perturbed, genes_of_interest, data_config, ctrl, n_datasets=data_config['n_datasets'])
     
     
     
