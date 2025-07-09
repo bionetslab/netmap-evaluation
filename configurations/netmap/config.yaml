@@ -1,5 +1,5 @@
 input_data: /data_nfs/og86asub/netmap/NetMap_LRP/benchmark/data/simulated_data/config_ro/net_51_5864/data.h5ad
-layer: 'counts'
+layer: 'X'
 transcription_factors: /data_nfs/datasets/SCENIC_DB/tf_lists/allTFs_hg38.txt
 tf_only: false
 penalize_error: true
@@ -16,3 +16,7 @@ masking_value: 0
 print_every: 100
 n_top_edges: 100
 n_models: 10
+model: standard
+loss_fn: LogCoshLoss
+xai_method: GradientShap
+top_perc: False

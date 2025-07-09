@@ -15,6 +15,8 @@ data_simulation_base_configs:
 
 netmap_base_configs:
     - "/data_nfs/og86asub/netmap/netmap-evaluation/configurations/netmap/config.yaml"
+    - "/data_nfs/og86asub/netmap/netmap-evaluation/configurations/netmap/config_2.yaml"
+    - "/data_nfs/og86asub/netmap/netmap-evaluation/configurations/netmap/config_3.yaml"
 
 csnet_base_configs:
     - "/data_nfs/og86asub/netmap/netmap-evaluation/configurations/csnet/config.yaml"

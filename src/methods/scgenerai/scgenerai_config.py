@@ -16,6 +16,7 @@ class ScGeneRAIConfig:
     split: bool = False
     test_size: float = 0.3
     temp_dir: str = '/tmp'
+    
 
     @classmethod
     def read_yaml(cls, yaml_file):

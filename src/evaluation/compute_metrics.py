@@ -78,18 +78,13 @@ def unify_group_labelling(adata, grn_adata, col_adata, col_grn_adata, return_map
     row_ind, col_ind = linear_sum_assignment(cm, maximize = True)
     
     names_ad = np.unique(adata.obs[col_adata])
+    print(names_ad)
     names_grn = np.unique(grn_adata.obs[col_grn_adata])
     mapping = {}
     reverse_mapping = {}
     for i in range(len(row_ind)):
-        if ((isinstance(names_ad[0], str)) & (isinstance(names_grn[0], str))):
-            reverse_mapping[names_grn[col_ind[i]]] = names_ad[row_ind[i]]
-        elif (isinstance(names_ad[0], str)):
-            reverse_mapping[col_ind[i]] = names_ad[row_ind[i]]
-        elif (isinstance(names_grn[0], str)):
-            reverse_mapping[names_grn[col_ind[i]]] = row_ind[i]
-        else:
-            reverse_mapping[col_ind[i]] = row_ind[i]
+        reverse_mapping[names_grn[col_ind[i]]] = names_ad[row_ind[i]]
+
     col_grn_adata_remapped = col_grn_adata + '_remap'
     if isinstance(np.unique(grn_adata.obs[col_grn_adata])[0], str):
         grn_adata.obs[col_grn_adata_remapped] = [reverse_mapping[a] for a in grn_adata.obs[col_grn_adata]]
@@ -105,15 +100,19 @@ def unify_group_labelling(adata, grn_adata, col_adata, col_grn_adata, return_map
         return adata, grn_adata, score
 
 def compute_egde_overlaps_simple(grn_adata, net_list):
+    print(grn_adata.var.columns)
     net_recovery = {}
     for net_name, net in net_list:
         overlap_count = (pd.merge(grn_adata.var, net, on=['source', 'target'], how='inner').shape[0])
+        reverse_overlap = (pd.merge(grn_adata.var, net, on=['target', 'source'], how='inner').shape[0])
         net_size = net.shape[0]
         overlap_perc = overlap_count/net_size
-        net_recovery[net_name] = {'edge_overlap':overlap_count, 'net_size': net_size, 'overlap_percent':overlap_perc}
+        reverse_overlap_perc = reverse_overlap/net_size
+        net_recovery[net_name] = {'edge_overlap':overlap_count, 'net_size': net_size, 'overlap_percent':overlap_perc, 'reverse_overlap_percent': reverse_overlap_perc}
 
         net_recovery['total_number_edges'] = grn_adata.var.shape[0]
     return net_recovery
+
 
 
 def process(grn_adata):
@@ -123,27 +122,45 @@ def process(grn_adata):
     grn_adata = spectral_clustering(grn_adata)
     return grn_adata
 
-def get_top_edges_per_cell(grn_adata, nets, top_edges):
-    b = np.argpartition(np.abs(grn_adata.X), top_edges)    # top 3 values from each row
+def get_top_edges_per_cell(grn_adata, top_edges):
+    
+
+    b = np.argpartition(grn_adata.X, top_edges)    # top 3 values from each row
     top_idx = b[:,-top_edges:]
 
+    print(grn_adata.var.columns)
     scgenerai_var_index_np = np.array(grn_adata.var)
     top_edges_per_cell = pd.DataFrame(np.concat(scgenerai_var_index_np[top_idx]))
     top_edges_per_cell.columns = ['source', 'target', 'n_cells']
     top_edges_per_cell['cell_barcode'] = np.repeat(grn_adata.obs.index, repeats=top_edges)
-    for net_name, net in nets:
-        print(top_edges_per_cell.merge(net, left_on=['source', 'target'], right_on = ['source', 'target']).groupby(['source', 'target']).count().shape[0])
     return top_edges_per_cell
 
 
 
-def get_top_edges_per_cell_per_cluster(adata, grn, nets, cluster_var = 'spectral_remap', top_edges=500):
+def get_top_edges_per_cell_per_cluster(grn_adata, nets, cluster_var = 'spectral_remap', top_edges=500):
     
-    adata = adata[adata.obs[cluster_var] == grn]
-    # identify the genes with the highest mean
-    top_edges_per_cell = get_top_edges_per_cell(adata, nets, top_edges)
-    return top_edges_per_cell
-    
+    grns = grn_adata.obs[cluster_var].unique()
+    on_target = []
+    off_target = []
+    # Correct cluster :)
+    for i in range(len(nets)):
+        for j in range(len(grns)):
+            clu = grns[j]
+            grn = nets[i]
+            print(clu)
+            print(f"Cluster {clu} -- GRN {grn[0]}")
+
+            grn_adata_sub = grn_adata[grn_adata.obs[cluster_var] == clu]
+            # identify the genes with the highest mean
+            top_edges_per_cell = get_top_edges_per_cell(grn_adata_sub,  top_edges)
+            agg = top_edges_per_cell.merge(grn[1], left_on=['source', 'target'], right_on = ['source', 'target']).loc[:,['source', 'target']].groupby(['source', 'target']).value_counts()
+            agg = agg.reset_index()
+            
+            if i == j:
+                on_target.append(agg.shape[0]/grn[1].shape[0])
+            else: 
+                off_target.append(agg.shape[0]/grn[1].shape[0])
+    return on_target, off_target
 
 
 def build_augmented_network(net):
@@ -166,10 +183,21 @@ def compute_metrics(grn_ads, nets, group_key='grn'):
     for method in grn_ads:
         print(method)
         try:
-            collect_results[method] = compute_egde_overlaps_simple(grn_ads[method], nets)
-            grn_ads[method] = process(grn_ads[method])
-            grn_ads[method], grn_ads[method], score = unify_group_labelling(grn_ads[method], grn_ads[method], group_key, 'spectral')
-            collect_results[method]['clustering_score'] = float(score)
+            try:
+                collect_results[method] = compute_egde_overlaps_simple(grn_ads[method], nets)
+            
+                grn_ads[method] = process(grn_ads[method])
+                grn_ads[method], grn_ads[method], score = unify_group_labelling(grn_ads[method], grn_ads[method], group_key, 'spectral')
+                collect_results[method]['clustering_score'] = float(score)
+                try:
+                    ont, oft = get_top_edges_per_cell_per_cluster(grn_ads[method], nets, cluster_var = 'spectral_remap', top_edges=5000)
+                    collect_results[method]['on_grn_overlap'] = ont
+                    collect_results[method]['off_grn_overlap'] = oft
+                except:
+                    print('error')
+            except KeyError:
+                print('empty anndata')
+
         except FileNotFoundError:
             collect_results[method] = 'no data'
     return collect_results
@@ -213,27 +241,48 @@ def parse_args():
         help='Path to the dataset configuration file (default: dataset_configuration.json)'
     )
 
+    parser.add_argument(
+    "--config_list",  # name on the CLI - drop the `--` for positional/required parameters
+    nargs="*",  # 0 or more values expected => creates a list
+    type=str,
+    default=None,  # default if nothing is provided
+    )
+
+    args = parser.parse_args()
+    config_dict = {}
+    for aa in args.config_list:
+        n = aa.split('=')
+        config_dict[n[0].strip()] = n[1].strip() 
+    return args, config_dict
 
 
-    
-    return parser.parse_args()
+def config_reader(configs):
+    config_dict = {}
+    for c in configs:
+        if  c == 'scgenerai':
+            scgenerai_config = ScGeneRAIConfig.read_yaml(configs[c])
+            config_dict[c] = scgenerai_config
+        elif c == 'csnet':
+            csnet_config = CsNetConfig.read_yaml(configs[c])
+            config_dict[c] == csnet_config
+        else:
+            netmap_config = NetmapConfig.read_yaml(configs[c])
+            config_dict[c] = netmap_config
+    return config_dict
 
 if  __name__ == '__main__':
 
     import argparse
 
-    args = parse_args()
-    print(f"Netmap Configuration File: {args.netmap_config}")
-    print(f"CSnet Configuration File: {args.csnet_config}")
-    print(f"ScGeneRAI Configuration File: {args.scgenerai_config}")
+    args, config_dict = parse_args()
+    # print(f"Netmap Configuration File: {args.netmap_config}")
+    # print(f"CSnet Configuration File: {args.csnet_config}")
+    # print(f"ScGeneRAI Configuration File: {args.scgenerai_config}")
     print(f"Dataset Configuration File: {args.dataset_config}")
     print(f"Pipeline Configuration File: {args.pipeline_config}")
 
 
-    # READ all configurations
-    netmap_config = NetmapConfig.read_yaml(args.netmap_config)
-    scgenerai_config = ScGeneRAIConfig.read_yaml(args.scgenerai_config)
-    csnet_config = CsNetConfig.read_yaml(args.csnet_config)
+    config_dict = config_reader(config_dict)
     dataset_config = DataSimulationConfig.read_yaml(args.dataset_config)
     pipeline_config = PipelineConfig.read_yaml(args.pipeline_config)
 
@@ -247,24 +296,41 @@ if  __name__ == '__main__':
     augmented_nets = [(net[0], build_augmented_network(net[1])) for net in nets]
 
     grn_ads = {}
+
+    for c in config_dict:
+        try:
+            print('reading file')
+
+            print(op.join(config_dict[c].output_directory, config_dict[c].adata_filename))
+            scgenerai = sc.read_h5ad(op.join(config_dict[c].output_directory, config_dict[c].adata_filename))
+            grn_ads[c] = scgenerai
+            print(scgenerai)
+        except FileNotFoundError:
+            print('ScGeneRAI not found')
+    
     # READ all anndata objects
-    try:
-        scgenerai = sc.read_h5ad(op.join(scgenerai_config.output_directory, scgenerai_config.adata_filename))
-        grn_ads['scgenerai'] = scgenerai
-    except FileNotFoundError:
-        print('ScGeneRAI not found')
+    # try:
+    #     print(op.join(scgenerai_config.output_directory, scgenerai_config.adata_filename))
+    #     scgenerai = sc.read_h5ad(op.join(scgenerai_config.output_directory, scgenerai_config.adata_filename))
+    #     grn_ads['scgenerai'] = scgenerai
+    #     print(scgenerai)
+    # except FileNotFoundError:
+    #     print('ScGeneRAI not found')
     
-    try:
-        csnet = sc.read_h5ad(op.join(csnet_config.output_directory,csnet_config.filename+".csn.h5ad"))
-        grn_ads['csnet'] = csnet
-    except FileNotFoundError:
-        print('ScGeneRAI not found')
+    # try:
+    #     csnet = sc.read_h5ad(op.join(csnet_config.output_directory,csnet_config.filename+".csn.h5ad"))
+    #     grn_ads['csnet'] = csnet
+    # except FileNotFoundError:
+    #     print('ScGeneRAI not found')
     
-    try:
-        netmap = sc.read_h5ad(op.join(netmap_config.output_directory,netmap_config.adata_filename))
-        grn_ads['netmap'] = netmap
-    except FileNotFoundError:
-        print('Ntmap not found')
+    # try:
+    #     netmap = sc.read_h5ad(op.join(netmap_config.output_directory,netmap_config.adata_filename))
+    #     grn_ads['netmap'] = netmap
+    #     grn_ads['netmap'].obs['grn'] = pd.Categorical(grn_ads['csnet'].obs['grn'])
+
+    # except FileNotFoundError:
+    #     print('Ntmap not found')
+
 
 
     collect_results = compute_metrics(grn_ads=grn_ads, nets= nets, group_key=dataset_config.group_key)

@@ -179,6 +179,7 @@ if __name__ == "__main__":
 
     # STEP 5.3 NETMAP RUN
     # Create all config files for scGeneRAI run
+    current_netmap_version = 'netmap'
     for net in data_simulation_configs:
         for c in pipeline_config.netmap_base_configs:
             netmap_trial = op.basename(c).replace('.yaml', '')
@@ -191,21 +192,29 @@ if __name__ == "__main__":
                 
                 # add information to trial tracker
                 netmap_config_path = op.join(config_dir, f"{net}.config.yaml")
-                netmap_config.output_directory =  op.join(pipeline_config.result_folder, 'netmap', netmap_trial, data_trial, net)
-                data_simulation_configs = pipeline_update_tool_info(data_simulation_configs, netmap_config_path, netmap_config.output_directory, data_trial, net, 'netmap')
+                netmap_config.output_directory =  op.join(pipeline_config.result_folder, current_netmap_version, netmap_trial, data_trial, net)
+                data_simulation_configs = pipeline_update_tool_info(data_simulation_configs, netmap_config_path, netmap_config.output_directory, data_trial, net, current_netmap_version)
 
                 # update config path with input data
                 netmap_config.input_data =  op.join(data_simulation_configs[net]['data_simulation']['data_path'][data_trial], 'data.h5ad')
                 netmap_config.write_yaml(netmap_config_path)
 
 
-    for net in data_simulation_configs:
-        for netmap_trial in data_simulation_configs[net]['netmap']:
-                netmap_call = f"python src/methods/netmap/netmap_runner.py --config {data_simulation_configs[net]['netmap'][netmap_trial]['config']} --dataset_config {data_simulation_configs[net]['data_simulation']['configs'][netmap_trial]}" 
-                print(netmap_call)
-                outfile = f"{op.join(data_simulation_configs[net]['netmap'][netmap_trial]['result'], 'config.yaml')}"
-                pm.run(netmap_call, outfile )
+    # for net in data_simulation_configs:
+    #     for netmap_trial in data_simulation_configs[net][current_netmap_version]:
+    #             netmap_call = f"python src/methods/netmap/netmap_runner.py --config {data_simulation_configs[net][current_netmap_version][netmap_trial]['config']} --dataset_config {data_simulation_configs[net]['data_simulation']['configs'][netmap_trial]}" 
+    #             print(netmap_call)
+    #             outfile = f"{op.join(data_simulation_configs[net][current_netmap_version][netmap_trial]['result'], 'config.yaml')}"
+    #             pm.run(netmap_call, outfile )
 
+
+
+    for net in data_simulation_configs:
+        for netmap_trial in data_simulation_configs[net][current_netmap_version]:
+                netmap_call = f"python src/methods/netmap/netmap_runner_v2.py --config {data_simulation_configs[net][current_netmap_version][netmap_trial]['config']} --dataset_config {data_simulation_configs[net]['data_simulation']['configs'][netmap_trial]}" 
+                print(netmap_call)
+                outfile = f"{op.join(data_simulation_configs[net][current_netmap_version][netmap_trial]['result'], 'config.yaml')}"
+                pm.run(netmap_call, outfile )
 
 
 
@@ -215,10 +224,10 @@ if __name__ == "__main__":
     # STEP 6. EVALUATE RESULTS
     for net in data_simulation_configs:
         # take any data simulation trial
-        for netmap_trial in data_simulation_configs[net]['netmap']:
+        for netmap_trial in data_simulation_configs[net][current_netmap_version]:
                 eval_call = f"python src/evaluation/compute_metrics.py \
                 --scgenerai_config {data_simulation_configs[net]['scgenerai'][netmap_trial]['config']} \
-                --netmap_config {data_simulation_configs[net]['netmap'][netmap_trial]['config']} \
+                --netmap_config {data_simulation_configs[net][current_netmap_version][netmap_trial]['config']} \
                 --csnet_config {data_simulation_configs[net]['csnet'][netmap_trial]['config']} \
                 --dataset_config {data_simulation_configs[net]['data_simulation']['configs'][netmap_trial]} \
                 --pipeline_config {config_file}" 

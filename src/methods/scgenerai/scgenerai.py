@@ -96,7 +96,7 @@ def run_scgenerai(config):
     
         model.fit(data_train_df, model_depth=2, nepochs=100, lr=2e-2, batch_size=5, lr_decay = 0.99, descriptors = None, early_stopping = True, device_name = device)
         
-        model.predict_networks(data_test_df, descriptors = None, LRPau = True, remove_descriptors = True, device_name = device, PATH = temp_dir)
+        model.predict_networks(data_test_df, descriptors = None, LRPau = True, remove_descriptors = True, device_name = device, PATH = temp_dir )
 
         model_time = time.monotonic()-start
         print(f'Elapsed time: {model_time}')
