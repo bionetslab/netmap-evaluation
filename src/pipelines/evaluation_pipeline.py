@@ -291,7 +291,7 @@ if __name__ == "__main__":
                 eval_call = f"python src/evaluation/compute_metrics.py \
                 --config_list scgenerai={data_simulation_configs[net]['scgenerai'][netmap_trial]['config']} \
                 netmap={data_simulation_configs[net]['netmap_v3'][netmap_trial]['config']} \
-                --csnet={data_simulation_configs[net]['csnet'][netmap_trial]['config']} \
+                csnet={data_simulation_configs[net]['csnet'][netmap_trial]['config']} \
                 --dataset_config {data_simulation_configs[net]['data_simulation']['configs'][netmap_trial]} \
                 --pipeline_config {config_file}" 
                 print(eval_call)
