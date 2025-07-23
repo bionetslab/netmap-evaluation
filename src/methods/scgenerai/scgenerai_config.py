@@ -15,6 +15,7 @@ class ScGeneRAIConfig:
     rerun: bool = True
     split: bool = False
     test_size: float = 0.3
+    use_descriptors: bool = False
     temp_dir: str = '/tmp'
     
 

@@ -137,7 +137,7 @@ def get_top_edges_per_cell(grn_adata, top_edges):
 
 
 
-def get_top_edges_per_cell_per_cluster(grn_adata, nets, cluster_var = 'spectral_remap', top_edges=500):
+def get_top_edges_per_cell_per_cluster(grn_adata, nets, cluster_var = 'spectral_remap', top_edges=100):
     
     grns = grn_adata.obs[cluster_var].unique()
     on_target = []
@@ -178,21 +178,49 @@ def build_augmented_network(net):
     return augmented_net
 
 
-def compute_metrics(grn_ads, nets, group_key='grn'):
+def compute_metrics(grn_ads, nets, augmented_nets, global_nets, group_key='grn'):
     collect_results = {}
+    results = []
     for method in grn_ads:
         print(method)
         try:
             try:
                 collect_results[method] = compute_egde_overlaps_simple(grn_ads[method], nets)
-            
                 grn_ads[method] = process(grn_ads[method])
                 grn_ads[method], grn_ads[method], score = unify_group_labelling(grn_ads[method], grn_ads[method], group_key, 'spectral')
                 collect_results[method]['clustering_score'] = float(score)
                 try:
-                    ont, oft = get_top_edges_per_cell_per_cluster(grn_ads[method], nets, cluster_var = 'spectral_remap', top_edges=5000)
-                    collect_results[method]['on_grn_overlap'] = ont
-                    collect_results[method]['off_grn_overlap'] = oft
+                    overlaps_on = []
+                    overlaps_off = []
+                    augmented_on = []
+                    augmented_off = []
+                    global_on = []
+                    top_edges = [10, 50, 100, 500, 1000, 5000, 10000]
+                    edge_index = []
+                    methods = []
+                    for i in top_edges:
+                        ont, oft = get_top_edges_per_cell_per_cluster(grn_ads[method], nets, cluster_var = 'spectral_remap', top_edges=i)
+                        ont_a, oft_a = get_top_edges_per_cell_per_cluster(grn_ads[method], augmented_nets, cluster_var = 'spectral_remap', top_edges=i)
+                        ont_g, oft_g = get_top_edges_per_cell_per_cluster(grn_ads[method], global_nets, cluster_var = 'spectral_remap', top_edges=i)
+
+                        for o in ont:
+                            overlaps_on.append(o)
+                        for o in ont_a:
+                            augmented_on.append(o)
+                        for o in oft_a:
+                            augmented_off.append(o)
+                        for o in zip(ont_g, oft_g):
+                            global_on.append(o[0])
+                            global_on.append(o[1])
+                        for o in oft:
+                            overlaps_off.append(o)
+                            edge_index.append(i)
+                            methods.append(method)
+                        
+                    overlaps = pd.DataFrame({'method': methods, 'n_top':edge_index,\
+                                              'on_target': overlaps_on, 'off_target':overlaps_off,\
+                                            'augmented_on': augmented_on, 'augmented_off':augmented_off, 'external':global_on})
+                    results.append(overlaps)
                 except:
                     print('error')
             except KeyError:
@@ -200,7 +228,8 @@ def compute_metrics(grn_ads, nets, group_key='grn'):
 
         except FileNotFoundError:
             collect_results[method] = 'no data'
-    return collect_results
+    overlaps = pd.concat(results)
+    return collect_results, overlaps
 
 
 def parse_args():
@@ -259,12 +288,12 @@ def parse_args():
 def config_reader(configs):
     config_dict = {}
     for c in configs:
-        if  c == 'scgenerai':
+        if  c.startswith('scgenerai'):
             scgenerai_config = ScGeneRAIConfig.read_yaml(configs[c])
             config_dict[c] = scgenerai_config
-        elif c == 'csnet':
+        elif c.startswith('csnet'):
             csnet_config = CsNetConfig.read_yaml(configs[c])
-            config_dict[c] == csnet_config
+            config_dict[c] = csnet_config
         else:
             netmap_config = NetmapConfig.read_yaml(configs[c])
             config_dict[c] = netmap_config
@@ -290,6 +319,7 @@ if  __name__ == '__main__':
     # read network files
     
     nets = [(op.basename(op.dirname(filename)), pd.read_csv(op.join(pipeline_config.clustered_network_dir, filename), sep=dataset_config.separator)) for filename in dataset_config.edgelist]
+    off_net = [(op.basename(op.dirname(filename)), pd.read_csv(op.join(pipeline_config.clustered_network_dir, filename), sep=dataset_config.separator)) for filename in dataset_config.common_edges]
 
     print(nets)
     # Augmented net contains edges between genes which are controlled by the same transcription factor
@@ -300,13 +330,16 @@ if  __name__ == '__main__':
     for c in config_dict:
         try:
             print('reading file')
+            if c.startswith('csnet'):
+                scgenerai = sc.read_h5ad(op.join(config_dict[c].output_directory, config_dict[c].filename))
+            else:
+                scgenerai = sc.read_h5ad(op.join(config_dict[c].output_directory, config_dict[c].adata_filename))
 
-            print(op.join(config_dict[c].output_directory, config_dict[c].adata_filename))
-            scgenerai = sc.read_h5ad(op.join(config_dict[c].output_directory, config_dict[c].adata_filename))
             grn_ads[c] = scgenerai
             print(scgenerai)
-        except FileNotFoundError:
-            print('ScGeneRAI not found')
+        except:
+            continue
+
     
     # READ all anndata objects
     # try:
@@ -332,12 +365,14 @@ if  __name__ == '__main__':
     #     print('Ntmap not found')
 
 
+    print(grn_ads)
 
-    collect_results = compute_metrics(grn_ads=grn_ads, nets= nets, group_key=dataset_config.group_key)
+    collect_results, overlaps = compute_metrics(grn_ads=grn_ads, nets= nets, augmented_nets=augmented_nets, global_nets=off_net, group_key=dataset_config.group_key)
 
     outdir = op.join(pipeline_config.summary_output_dir, dataset_config.dataset_id)
     os.makedirs(outdir, exist_ok = True)
     write_config(collect_results, file=op.join(outdir, 'results.yaml'))
+    overlaps.to_csv(op.join(outdir, 'overlaps.tsv'), sep='\t')
 
 
     

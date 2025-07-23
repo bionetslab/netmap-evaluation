@@ -8,4 +8,4 @@ overwrite: true
 rerun: true
 split: false
 test_size: 0.3
-use_descriptors: False
+use_descriptors: True

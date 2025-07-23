@@ -70,15 +70,17 @@ def pipeline_update_simulation_path(config, trial_output_dir, trial, net):
 
 
 
-def pipeline_update_tool_info(config, config_path, result_path, trial, net, tool):
+def pipeline_update_tool_info(config, config_path, result_path, data_trial, net, tool, tool_trial):
     if tool not in config[net]:
         config[net][tool] = {}
-    if trial not in config[net][tool]:
-        config[net][tool][trial] = {}
+    if data_trial not in config[net][tool]:
+        config[net][tool][data_trial] = {}
 
+    if tool_trial not in config[net][tool][data_trial]:
+        config[net][tool][data_trial][tool_trial] = {}
 
-    config[net][tool][trial]['config']  = config_path
-    config[net][tool][trial]['result']  = result_path
+    config[net][tool][data_trial][tool_trial]['config']  = config_path
+    config[net][tool][data_trial][tool_trial]['result']  = result_path
     return config
 
 
@@ -193,17 +195,16 @@ if __name__ == "__main__":
                 netmap_config_path = op.join(config_dir, f"{net}.config.yaml")
                 
                 csnet_config.output_directory =  op.join(pipeline_config.result_folder, 'csnet', netmap_trial, data_trial, net)
-                data_simulation_configs = pipeline_update_tool_info(data_simulation_configs, netmap_config_path, csnet_config.output_directory, data_trial, net, 'csnet')
+                data_simulation_configs = pipeline_update_tool_info(data_simulation_configs, netmap_config_path, csnet_config.output_directory, data_trial, net, 'csnet', netmap_trial)
 
-                print(op.join(data_simulation_configs[net]['data_simulation']['data_path'][data_trial], 'data.h5ad'))
                 csnet_config.input_data =  op.join(data_simulation_configs[net]['data_simulation']['data_path'][data_trial], 'data.h5ad')
                 csnet_config.write_yaml(netmap_config_path)
             
     for net in data_simulation_configs:
         for netmap_trial in data_simulation_configs[net]['csnet']:
-                netmap_call = f"python src/methods/csnet/csnet.py --config {data_simulation_configs[net]['csnet'][netmap_trial]['config']}" 
-                print(netmap_call)
-                outfile = f"{op.join(data_simulation_configs[net]['csnet'][netmap_trial]['result'], 'config.yaml')}"
+                for tool_trial in data_simulation_configs[net]['csnet'][netmap_trial]:
+                    netmap_call = f"python src/methods/csnet/csnet.py --config {data_simulation_configs[net]['csnet'][netmap_trial][tool_trial]['config']}" 
+                    outfile = f"{op.join(data_simulation_configs[net]['csnet'][netmap_trial][tool_trial]['result'], 'config.yaml')}"
 
                 pm.run(netmap_call, outfile)
 
@@ -214,29 +215,43 @@ if __name__ == "__main__":
     for net in data_simulation_configs:
         for c in pipeline_config.netmap_base_configs:
             netmap_trial = op.basename(c).replace('.yaml', '')
-            print(c)
             netmap_config = NetmapConfig.read_yaml(yaml_file=c)
 
+            
             for data_trial in data_simulation_configs[net]['data_simulation']['configs']:
                 config_dir = op.join(pipeline_config.netmap_config_dir, netmap_trial, data_trial)
                 os.makedirs(config_dir, exist_ok=True)                
                 
                 # add information to trial tracker
                 netmap_config_path = op.join(config_dir, f"{net}.config.yaml")
-                netmap_config.output_directory =  op.join(pipeline_config.result_folder, 'netmap_v3', netmap_trial, data_trial, net)
-                data_simulation_configs = pipeline_update_tool_info(data_simulation_configs, netmap_config_path, netmap_config.output_directory, data_trial, net, 'netmap_v3')
+                netmap_config.output_directory =  op.join(pipeline_config.result_folder, 'netmap', netmap_trial, data_trial, net)
+                data_simulation_configs = pipeline_update_tool_info(data_simulation_configs, netmap_config_path, netmap_config.output_directory, data_trial, net, 'netmap', netmap_trial)
 
                 # update config path with input data
                 netmap_config.input_data =  op.join(data_simulation_configs[net]['data_simulation']['data_path'][data_trial], 'data.h5ad')
                 netmap_config.write_yaml(netmap_config_path)
 
-    for net in data_simulation_configs:
-        for netmap_trial in data_simulation_configs[net]['netmap_v3']:
-                netmap_call = f"python src/methods/netmap/netmap_runner_v3.py --config {data_simulation_configs[net]['netmap_v3'][netmap_trial]['config']} --dataset_config {data_simulation_configs[net]['data_simulation']['configs'][netmap_trial]}" 
-                print(netmap_call)
-                outfile = f"{op.join(data_simulation_configs[net]['netmap_v3'][netmap_trial]['result'], 'config.yaml')}"
-                pm.run(netmap_call, outfile )
+    # for net in data_simulation_configs:
+    #     for netmap_trial in data_simulation_configs[net]['netmap']:
+    #             for tool_trial in data_simulation_configs[net]['netmap'][netmap_trial]:
+    #                 try:
+    #                     print(tool_trial)
+    #                     netmap_call = f"python src/methods/netmap/netmap_runner_v2.py --config {data_simulation_configs[net]['netmap'][netmap_trial][tool_trial]['config']} --dataset_config {data_simulation_configs[net]['data_simulation']['configs'][netmap_trial]}" 
+    #                     outfile = f"{op.join(data_simulation_configs[net]['netmap'][netmap_trial][tool_trial]['result'], 'config.yaml')}"
+    #                     pm.run(netmap_call, outfile )
+    #                 except:
+    #                     continue
 
+    for net in data_simulation_configs:
+        for netmap_trial in data_simulation_configs[net]['netmap']:
+                for tool_trial in data_simulation_configs[net]['netmap'][netmap_trial]:
+                    try:
+                        print(tool_trial)
+                        netmap_call = f"python src/methods/netmap/netmap_runner_v4.py --config {data_simulation_configs[net]['netmap'][netmap_trial][tool_trial]['config']} --dataset_config {data_simulation_configs[net]['data_simulation']['configs'][netmap_trial]}" 
+                        outfile = f"{op.join(data_simulation_configs[net]['netmap'][netmap_trial][tool_trial]['result'], 'config.yaml')}"
+                        pm.run(netmap_call, outfile )
+                    except:
+                        continue
 
     # for net in data_simulation_configs:
     #     for netmap_trial in data_simulation_configs[net]['netmap']:
@@ -264,19 +279,20 @@ if __name__ == "__main__":
                 # add information to trial tracker
                 netmap_config_path = op.join(config_dir, f"{net}.config.yaml")
                 scgenerai_config.output_directory =  op.join(pipeline_config.result_folder, 'scgenerai', netmap_trial, data_trial, net)
-                data_simulation_configs = pipeline_update_tool_info(data_simulation_configs, netmap_config_path, scgenerai_config.output_directory, data_trial, net, 'scgenerai')
+                data_simulation_configs = pipeline_update_tool_info(data_simulation_configs, netmap_config_path, scgenerai_config.output_directory, data_trial, net, 'scgenerai', netmap_trial)
 
                 # update config path with input data
                 scgenerai_config.input_data =  op.join(data_simulation_configs[net]['data_simulation']['data_path'][data_trial], 'data.h5ad')
                 scgenerai_config.write_yaml(netmap_config_path)
 
 
-    for net in data_simulation_configs:
-        for netmap_trial in data_simulation_configs[net]['scgenerai']:
-                netmap_call = f"python src/methods/scgenerai/scgenerai.py --config {data_simulation_configs[net]['scgenerai'][netmap_trial]['config']} --dataset_config {data_simulation_configs[net]['data_simulation']['configs'][netmap_trial]}" 
-                print(netmap_call)
-                outfile = f"{op.join(data_simulation_configs[net]['scgenerai'][netmap_trial]['result'], 'config.yaml')}"
-                pm.run(netmap_call, outfile )
+    # for net in data_simulation_configs:
+    #     for netmap_trial in data_simulation_configs[net]['scgenerai']:
+    #             for tool_trial in data_simulation_configs[net]['scgenerai'][netmap_trial]:
+
+    #                 netmap_call = f"python src/methods/scgenerai/scgenerai.py --config {data_simulation_configs[net]['scgenerai'][netmap_trial][tool_trial]['config']} --dataset_config {data_simulation_configs[net]['data_simulation']['configs'][netmap_trial]}" 
+    #                 outfile = f"{op.join(data_simulation_configs[net]['scgenerai'][netmap_trial][tool_trial]['result'], 'config.yaml')}"
+    #                 pm.run(netmap_call, outfile )
 
 
 
@@ -284,19 +300,24 @@ if __name__ == "__main__":
 
     write_config(data_simulation_configs, file=op.join(pipeline_config.outfolder, 'all_tests.yaml'))
 
+    print(data_simulation_configs)
     # STEP 6. EVALUATE RESULTS
     for net in data_simulation_configs:
         # take any data simulation trial
-        for netmap_trial in data_simulation_configs[net]['scgenerai']:
-                eval_call = f"python src/evaluation/compute_metrics.py \
-                --config_list scgenerai={data_simulation_configs[net]['scgenerai'][netmap_trial]['config']} \
-                netmap={data_simulation_configs[net]['netmap_v3'][netmap_trial]['config']} \
-                csnet={data_simulation_configs[net]['csnet'][netmap_trial]['config']} \
-                --dataset_config {data_simulation_configs[net]['data_simulation']['configs'][netmap_trial]} \
-                --pipeline_config {config_file}" 
-                print(eval_call)
-                outfile = f"{op.join(pipeline_config.summary_output_dir, net, 'results.yaml')}"
-                pm.run(eval_call, outfile )
+        config_list = "--config_list "
+        eval_call = f"python src/evaluation/compute_metrics.py --pipeline_config {config_file} " 
+
+        for data_trial in data_simulation_configs[net]['data_simulation']['configs']:
+            eval_call+= f"--dataset_config {data_simulation_configs[net]['data_simulation']['configs'][data_trial]} "
+            for t in ['netmap', 'scgenerai', 'csnet']:
+                for tool_trial in data_simulation_configs[net][t][data_trial]:
+                    print(tool_trial)
+                    config_list+= f"{t}_{tool_trial}={data_simulation_configs[net][t][data_trial][tool_trial]['config']} " 
+        eval_call+=config_list
+
+        print(eval_call)
+        outfile = f"{op.join(pipeline_config.summary_output_dir, net, 'results.yaml')}"
+        pm.run(eval_call, outfile )
     
     pm.stop_pipeline()
 

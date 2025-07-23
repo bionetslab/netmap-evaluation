@@ -85,6 +85,14 @@ def run_scgenerai(config):
         data_train_df = pd.DataFrame(data, index=adata.obs_names, columns=adata.var_names)
         data_test_df = data_train_df
 
+    if config.use_descriptors:
+        grn_col = [str(x) for x in adata.obs.grn]
+        descriptors = pd.DataFrame({'grn': grn_col})
+        #descriptors['grn'] = descriptors['grn'].astype("category")
+        print(descriptors.dtypes)
+    else: 
+        descriptors = None
+
     if rerun:
         start = time.monotonic()
         model = scGeneRAI()
@@ -94,9 +102,11 @@ def run_scgenerai(config):
         else:
             device = torch.device('cpu')
     
-        model.fit(data_train_df, model_depth=2, nepochs=100, lr=2e-2, batch_size=5, lr_decay = 0.99, descriptors = None, early_stopping = True, device_name = device)
+        print(data_test_df.shape)
+        model.fit(data_train_df, model_depth=2, nepochs=100, lr=2e-2, batch_size=5, lr_decay = 0.99, descriptors = descriptors, early_stopping = True, device_name = device)
         
-        model.predict_networks(data_test_df, descriptors = None, LRPau = True, remove_descriptors = True, device_name = device, PATH = temp_dir )
+        #Remove interactions between descriptors and variables
+        model.predict_networks(data_test_df, descriptors = descriptors, LRPau = True, remove_descriptors = True, device_name = device, PATH = temp_dir )
 
         model_time = time.monotonic()-start
         print(f'Elapsed time: {model_time}')

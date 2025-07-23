@@ -17,6 +17,6 @@ print_every: 100
 n_top_edges: 100
 n_models: 10
 model: standard
-loss_fn: MSELoss
+loss_fn: LogCoshLoss
 xai_method: GradientShap
-top_perc: True
+top_perc: False

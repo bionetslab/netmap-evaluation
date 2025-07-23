@@ -16,7 +16,12 @@ masking_value: 0
 print_every: 100
 n_top_edges: 100
 n_models: 10
-model: standard
-loss_fn: MSELoss
-xai_method: GradientShap
-top_perc: True
+model: negbin
+loss_fn: LogCoshLoss
+xai_method: GuidedBackprop
+percentile: 50
+penalty: 'np.cov'
+raw_attribution: false
+aggregation_strategy: 'mean'
+use_differential: true
+

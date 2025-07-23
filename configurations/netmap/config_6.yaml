@@ -18,5 +18,5 @@ n_top_edges: 100
 n_models: 10
 model: standard
 loss_fn: MSELoss
-xai_method: GradientShap
+xai_method: LRP
 top_perc: True
