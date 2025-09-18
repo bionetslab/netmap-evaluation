@@ -1,0 +1,5 @@
+input_data: data.h5ad
+tf_only: false
+transcription_factors: /data_nfs/datasets/SCENIC_DB/tf_lists/allTFs_hg38.txt
+output_directory: grnboost2_results
+grn: 'grn.tsv'

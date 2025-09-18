@@ -22,6 +22,10 @@ from sklearn.cluster import SpectralClustering
 
 from src.utils import write_config
 
+import numpy as np
+import pandas as pd
+from typing import Optional
+
 
 def downstream_recipe(adata)-> anndata.AnnData:
     """
@@ -78,7 +82,6 @@ def unify_group_labelling(adata, grn_adata, col_adata, col_grn_adata, return_map
     row_ind, col_ind = linear_sum_assignment(cm, maximize = True)
     
     names_ad = np.unique(adata.obs[col_adata])
-    print(names_ad)
     names_grn = np.unique(grn_adata.obs[col_grn_adata])
     mapping = {}
     reverse_mapping = {}
@@ -100,7 +103,6 @@ def unify_group_labelling(adata, grn_adata, col_adata, col_grn_adata, return_map
         return adata, grn_adata, score
 
 def compute_egde_overlaps_simple(grn_adata, net_list):
-    print(grn_adata.var.columns)
     net_recovery = {}
     for net_name, net in net_list:
         overlap_count = (pd.merge(grn_adata.var, net, on=['source', 'target'], how='inner').shape[0])
@@ -122,45 +124,8 @@ def process(grn_adata):
     grn_adata = spectral_clustering(grn_adata)
     return grn_adata
 
-def get_top_edges_per_cell(grn_adata, top_edges):
-    
-
-    b = np.argpartition(grn_adata.X, top_edges)    # top 3 values from each row
-    top_idx = b[:,-top_edges:]
-
-    print(grn_adata.var.columns)
-    scgenerai_var_index_np = np.array(grn_adata.var)
-    top_edges_per_cell = pd.DataFrame(np.concat(scgenerai_var_index_np[top_idx]))
-    top_edges_per_cell.columns = ['source', 'target', 'n_cells']
-    top_edges_per_cell['cell_barcode'] = np.repeat(grn_adata.obs.index, repeats=top_edges)
-    return top_edges_per_cell
 
 
-
-def get_top_edges_per_cell_per_cluster(grn_adata, nets, cluster_var = 'spectral_remap', top_edges=100):
-    
-    grns = grn_adata.obs[cluster_var].unique()
-    on_target = []
-    off_target = []
-    # Correct cluster :)
-    for i in range(len(nets)):
-        for j in range(len(grns)):
-            clu = grns[j]
-            grn = nets[i]
-            print(clu)
-            print(f"Cluster {clu} -- GRN {grn[0]}")
-
-            grn_adata_sub = grn_adata[grn_adata.obs[cluster_var] == clu]
-            # identify the genes with the highest mean
-            top_edges_per_cell = get_top_edges_per_cell(grn_adata_sub,  top_edges)
-            agg = top_edges_per_cell.merge(grn[1], left_on=['source', 'target'], right_on = ['source', 'target']).loc[:,['source', 'target']].groupby(['source', 'target']).value_counts()
-            agg = agg.reset_index()
-            
-            if i == j:
-                on_target.append(agg.shape[0]/grn[1].shape[0])
-            else: 
-                off_target.append(agg.shape[0]/grn[1].shape[0])
-    return on_target, off_target
 
 
 def build_augmented_network(net):
@@ -178,59 +143,162 @@ def build_augmented_network(net):
     return augmented_net
 
 
-def compute_metrics(grn_ads, nets, augmented_nets, global_nets, group_key='grn'):
+
+def get_top_edges_per_cell(grn_adata, top_edges):
+    partition_index = grn_adata.shape[1] - top_edges
+    b = np.argpartition(grn_adata.X, partition_index, axis=1)    
+    top_idx = b[:, partition_index:]
+    
+    edge_metadata_np = np.array(grn_adata.var.loc[:, ['source', 'target']])
+    top_edges_metadata = edge_metadata_np[top_idx.ravel()]
+
+    top_edges_per_cell = pd.DataFrame(top_edges_metadata, columns=['source', 'target'])
+    top_edges_per_cell['cell_barcode'] = np.repeat(grn_adata.obs.index, repeats=top_edges)
+    top_edges_per_cell['top_edges'] = top_edges
+    
+    return top_edges_per_cell
+
+def get_top_edges_global(grn_adata, top_edges: int):
+    top = []
+
+    for t in top_edges:
+        top.append(get_top_edges_per_cell(grn_adata, t))
+
+    top = pd.concat(top)
+    return top
+
+
+def get_top_edges_by_target(grn_adata, top_edges: int):
+
+    top = []
+    for tar in np.unique(grn_adata.var.target):
+        
+        sub = grn_adata[:, grn_adata.var.target == tar]
+
+        for t in top_edges:
+            if t>sub.shape[1]:
+                continue
+            top.append(get_top_edges_per_cell(sub, t))
+
+    top = pd.concat(top)
+    return top
+
+
+def get_top_edges_per_cell_per_cluster(grn_adata, nets, cluster_var = 'spectral_remap', top_edges=[100], group_by_target = False):
+    
+    grns = grn_adata.obs[cluster_var].unique()
+
+    top_edges_per_cell_collector = []
+    
+    for i in range(len(nets)):
+        for j in range(len(grns)):
+            clu = grns[j]
+            grn = nets[i]
+
+            print(f"Cluster {clu} -- GRN {grn[0]}")
+
+            grn_adata_sub = grn_adata[grn_adata.obs[cluster_var] == clu]
+            # identify the genes with the highest mean
+            if group_by_target:
+                top_edges_per_cell = get_top_edges_by_target(grn_adata_sub,  top_edges)
+            else:
+                top_edges_per_cell = get_top_edges_global(grn_adata_sub,  top_edges)
+
+
+            for te in top_edges:
+                agg = top_edges_per_cell[top_edges_per_cell.top_edges==te].merge(grn[1], left_on=['source', 'target'], right_on = ['source', 'target']).loc[:,['cell_barcode']].groupby(['cell_barcode']).value_counts()
+                
+                agg = agg.reset_index()
+                agg.columns = ['cell_barcode', 'egde_count']
+                mean_edges_recovered = agg.loc[ :, "egde_count"].median()
+                number_of_cells = agg.shape[0]
+
+                #print(agg)
+                tt = top_edges_per_cell[top_edges_per_cell.top_edges==te].loc[:,['source', 'target']].groupby(['source', 'target']).value_counts()
+
+                #print(tt)
+                agg['n_top'] = te
+                agg['net'] = grn[0]
+                # n_top, grn, TP = overlap, FP = top_k-TP
+                # Number edges 
+                n_edges = top_edges_per_cell[top_edges_per_cell.top_edges==te].shape[0]
+                TP = agg.shape[0]
+                FP = n_edges - TP
+                FN = grn[1].shape[0]-TP
+                gold_standard_edges = grn[1].shape[0]
+                current_collector =  [te, grn[0], mean_edges_recovered, number_of_cells,  gold_standard_edges, grn_adata.var.shape[0]]
+
+                if i == j:
+                    current_collector.append('on_target')
+                else: 
+                    current_collector.append('off_target')
+                
+                #print(current_collector)
+                top_edges_per_cell_collector.append(current_collector)
+
+
+    top_edges_per_cell_collector = pd.DataFrame(top_edges_per_cell_collector)
+    top_edges_per_cell_collector.columns = ['n_top', 'net', 'avg_edges_recovered', 'n_cells', 'gold_standard_edges', 'max_possible_edges', 'target']
+
+    return top_edges_per_cell_collector
+
+
+def reformat_dataframe(recovery_rates, config_name):
+        # Assuming your DataFrame is named df
+    recovery_rates = recovery_rates.pivot_table(
+        index=['n_top', 'net'],
+        columns='type',
+        values='percentage_recovered'
+    ).reset_index()
+    recovery_rates['method'] = config_name
+    recovery_rates = recovery_rates.loc[:, ['method', 'n_top', 'on_target', 'off_target']]
+    return recovery_rates
+
+
+
+
+def compute_metrics(grn_ads, nets, augmented_nets, global_nets, group_key='grn', group_by_target = False):
     collect_results = {}
     results = []
     for method in grn_ads:
-        print(method)
-        try:
-            try:
-                collect_results[method] = compute_egde_overlaps_simple(grn_ads[method], nets)
-                grn_ads[method] = process(grn_ads[method])
-                grn_ads[method], grn_ads[method], score = unify_group_labelling(grn_ads[method], grn_ads[method], group_key, 'spectral')
-                collect_results[method]['clustering_score'] = float(score)
-                try:
-                    overlaps_on = []
-                    overlaps_off = []
-                    augmented_on = []
-                    augmented_off = []
-                    global_on = []
-                    top_edges = [10, 50, 100, 500, 1000, 5000, 10000]
-                    edge_index = []
-                    methods = []
-                    for i in top_edges:
-                        ont, oft = get_top_edges_per_cell_per_cluster(grn_ads[method], nets, cluster_var = 'spectral_remap', top_edges=i)
-                        ont_a, oft_a = get_top_edges_per_cell_per_cluster(grn_ads[method], augmented_nets, cluster_var = 'spectral_remap', top_edges=i)
-                        ont_g, oft_g = get_top_edges_per_cell_per_cluster(grn_ads[method], global_nets, cluster_var = 'spectral_remap', top_edges=i)
+        print(f'Running for {method}')
+        
+        collect_results[method] = compute_egde_overlaps_simple(grn_ads[method], nets)
+        grn_ads[method] = process(grn_ads[method])
+        print(f'Unify group for {method}')
 
-                        for o in ont:
-                            overlaps_on.append(o)
-                        for o in ont_a:
-                            augmented_on.append(o)
-                        for o in oft_a:
-                            augmented_off.append(o)
-                        for o in zip(ont_g, oft_g):
-                            global_on.append(o[0])
-                            global_on.append(o[1])
-                        for o in oft:
-                            overlaps_off.append(o)
-                            edge_index.append(i)
-                            methods.append(method)
-                        
-                    overlaps = pd.DataFrame({'method': methods, 'n_top':edge_index,\
-                                              'on_target': overlaps_on, 'off_target':overlaps_off,\
-                                            'augmented_on': augmented_on, 'augmented_off':augmented_off, 'external':global_on})
-                    results.append(overlaps)
-                except:
-                    print('error')
-            except KeyError:
-                print('empty anndata')
+        grn_ads[method], grn_ads[method], score = unify_group_labelling(grn_ads[method], grn_ads[method], group_key, 'spectral')
+        collect_results[method]['clustering_score'] = float(score)
 
-        except FileNotFoundError:
-            collect_results[method] = 'no data'
-    overlaps = pd.concat(results)
-    return collect_results, overlaps
+        if group_by_target:
+            top_edges = [1,2,3,4,5,10, 15, 20, 25, 50]
+        else:
+            top_edges = [10, 50, 100, 500, 1000, 2500, 5000, 10000, 25000]
+ 
 
+        print(f'Getting top edges for {method}')
+
+        start = time.monotonic()
+        top_edges_per_cell_collector = get_top_edges_per_cell_per_cluster(grn_ads[method], nets, cluster_var = 'spectral_remap', top_edges=top_edges, group_by_target = group_by_target)
+        top_edges_per_cell_collector_augmented = get_top_edges_per_cell_per_cluster(grn_ads[method], augmented_nets, cluster_var = 'spectral_remap', top_edges=top_edges, group_by_target = group_by_target)
+        top_edges_per_cell_collector_global = get_top_edges_per_cell_per_cluster(grn_ads[method], global_nets, cluster_var = 'spectral_remap', top_edges=top_edges,group_by_target = group_by_target)
+
+        
+        top_edges_per_cell_collector['method'] = method
+        top_edges_per_cell_collector['net_type'] = 'strict'
+        top_edges_per_cell_collector_augmented['method'] = method
+        top_edges_per_cell_collector_augmented['net_type'] = 'extended'
+        top_edges_per_cell_collector_global['method'] = method
+        top_edges_per_cell_collector_global['net_type'] = 'unspecific'
+
+
+        results.append(top_edges_per_cell_collector)
+        results.append(top_edges_per_cell_collector_augmented)
+        results.append(top_edges_per_cell_collector_global)
+
+
+    results = pd.concat(results)
+    return results
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Argument parser with two configuration files.")
@@ -302,6 +370,8 @@ def config_reader(configs):
 if  __name__ == '__main__':
 
     import argparse
+    import time
+    import cProfile
 
     args, config_dict = parse_args()
     # print(f"Netmap Configuration File: {args.netmap_config}")
@@ -334,15 +404,14 @@ if  __name__ == '__main__':
                 scgenerai = sc.read_h5ad(op.join(config_dict[c].output_directory, config_dict[c].filename))
             else:
                 scgenerai = sc.read_h5ad(op.join(config_dict[c].output_directory, config_dict[c].adata_filename))
-
+                print(scgenerai.var)
             grn_ads[c] = scgenerai
-            print(scgenerai)
         except:
             continue
 
     
     # READ all anndata objects
-    # try:
+    # try:k_t
     #     print(op.join(scgenerai_config.output_directory, scgenerai_config.adata_filename))
     #     scgenerai = sc.read_h5ad(op.join(scgenerai_config.output_directory, scgenerai_config.adata_filename))
     #     grn_ads['scgenerai'] = scgenerai
@@ -365,14 +434,17 @@ if  __name__ == '__main__':
     #     print('Ntmap not found')
 
 
-    print(grn_ads)
 
-    collect_results, overlaps = compute_metrics(grn_ads=grn_ads, nets= nets, augmented_nets=augmented_nets, global_nets=off_net, group_key=dataset_config.group_key)
+
+    overlaps = compute_metrics(grn_ads=grn_ads, nets= nets, augmented_nets=augmented_nets, global_nets=off_net, group_key=dataset_config.group_key, group_by_target=True)
+
+    overlaps_ungrouped = compute_metrics(grn_ads=grn_ads, nets= nets, augmented_nets=augmented_nets, global_nets=off_net, group_key=dataset_config.group_key, group_by_target=False)
 
     outdir = op.join(pipeline_config.summary_output_dir, dataset_config.dataset_id)
     os.makedirs(outdir, exist_ok = True)
-    write_config(collect_results, file=op.join(outdir, 'results.yaml'))
-    overlaps.to_csv(op.join(outdir, 'overlaps.tsv'), sep='\t')
+    overlaps.to_csv(op.join(outdir, 'overlaps_per_target.tsv'), sep='\t')
+    overlaps_ungrouped.to_csv(op.join(outdir, 'overlaps_global_top_k.tsv'), sep='\t')
+
 
 
     

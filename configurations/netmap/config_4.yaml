@@ -6,17 +6,12 @@ penalize_error: true
 adata_filename: grn_lrp.h5ad
 grn: grn_lrp.tsv
 output_directory: /data_nfs/og86asub/netmap/NetMap_LRP/benchmark/results/base_config/config_ro/net_51_5864
-overwrite: true
-epochs: 150
+epochs: 10000 # Training uses early stopping
+model: NegativeBinomialAutoencoder   #ZINBAutoencoder
+n_models: 20
 learning_rate: 0.005
 optimizer: Adam
-test_size: 0.3
+validation_size: 0.2
+xai_method: GuidedBackprop
 masking_percentage: 0.1
-masking_value: 0
-print_every: 100
-n_top_edges: 100
-n_models: 10
-model: standard
-loss_fn: LogCoshLoss
-xai_method: GradientShap
-top_perc: True
+aggregation_strategy: 'mean'

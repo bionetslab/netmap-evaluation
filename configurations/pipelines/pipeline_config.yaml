@@ -14,30 +14,13 @@ data_simulation_base_configs:
     - "/data_nfs/og86asub/netmap/netmap-evaluation/configurations/data_simulation/config_easy.yaml"
 
 netmap_base_configs:
-    # - "/data_nfs/og86asub/netmap/netmap-evaluation/configurations/netmap/config.yaml"
-    # - "/data_nfs/og86asub/netmap/netmap-evaluation/configurations/netmap/config_2.yaml"
-    # - "/data_nfs/og86asub/netmap/netmap-evaluation/configurations/netmap/config_3.yaml"
-    # - "/data_nfs/og86asub/netmap/netmap-evaluation/configurations/netmap/config_4.yaml"
-    # - "/data_nfs/og86asub/netmap/netmap-evaluation/configurations/netmap/config_5.yaml"
-    # - "/data_nfs/og86asub/netmap/netmap-evaluation/configurations/netmap/config_6.yaml"
-    - "/data_nfs/og86asub/netmap/netmap-evaluation/configurations/netmap/config_7.yaml"
-    - "/data_nfs/og86asub/netmap/netmap-evaluation/configurations/netmap/config_8.yaml"
-    - "/data_nfs/og86asub/netmap/netmap-evaluation/configurations/netmap/config_9.yaml"
-    - "/data_nfs/og86asub/netmap/netmap-evaluation/configurations/netmap/config_10.yaml"
-    - "/data_nfs/og86asub/netmap/netmap-evaluation/configurations/netmap/config_11.yaml"
-    - "/data_nfs/og86asub/netmap/netmap-evaluation/configurations/netmap/config_12.yaml"
-    - "/data_nfs/og86asub/netmap/netmap-evaluation/configurations/netmap/config_13.yaml"
-    - "/data_nfs/og86asub/netmap/netmap-evaluation/configurations/netmap/config_14.yaml"
-    - "/data_nfs/og86asub/netmap/netmap-evaluation/configurations/netmap/config_15.yaml"
-    - "/data_nfs/og86asub/netmap/netmap-evaluation/configurations/netmap/config_16.yaml"
-    - "/data_nfs/og86asub/netmap/netmap-evaluation/configurations/netmap/config_17.yaml"
-    - "/data_nfs/og86asub/netmap/netmap-evaluation/configurations/netmap/config_18.yaml"
-    - "/data_nfs/og86asub/netmap/netmap-evaluation/configurations/netmap/config_19.yaml"
-    - "/data_nfs/og86asub/netmap/netmap-evaluation/configurations/netmap/config_20.yaml"
-    - "/data_nfs/og86asub/netmap/netmap-evaluation/configurations/netmap/config_21.yaml"
-    - "/data_nfs/og86asub/netmap/netmap-evaluation/configurations/netmap/config_22.yaml"
-    - "/data_nfs/og86asub/netmap/netmap-evaluation/configurations/netmap/config_23.yaml"
-    - "/data_nfs/og86asub/netmap/netmap-evaluation/configurations/netmap/config_24.yaml"
+    - "/data_nfs/og86asub/netmap/netmap-evaluation/configurations/netmap/config_1.yaml"
+    - "/data_nfs/og86asub/netmap/netmap-evaluation/configurations/netmap/config_2.yaml"
+    - "/data_nfs/og86asub/netmap/netmap-evaluation/configurations/netmap/config_3.yaml"
+    - "/data_nfs/og86asub/netmap/netmap-evaluation/configurations/netmap/config_4.yaml"
+    - "/data_nfs/og86asub/netmap/netmap-evaluation/configurations/netmap/config_5.yaml"
+    - "/data_nfs/og86asub/netmap/netmap-evaluation/configurations/netmap/config_6.yaml"
+
 
 
 
@@ -48,11 +31,16 @@ csnet_base_configs:
 
 scgenerai_base_configs:
     - "/data_nfs/og86asub/netmap/netmap-evaluation/configurations/scgenerai/config.yaml"
-    - "/data_nfs/og86asub/netmap/netmap-evaluation/configurations/scgenerai/config_1.yaml"
+
+grnboost2_base_configs:
+    - "/data_nfs/og86asub/netmap/netmap-evaluation/configurations/grnboost2/config.yaml"
+    - "/data_nfs/og86asub/netmap/netmap-evaluation/configurations/grnboost2/config_2.yaml"
+
 
 
 perturb_seq_base_configs:
     - "/data_nfs/og86asub/netmap/netmap-evaluation/configurations/perturb_seq/config.yaml"
+
 
 
 result_folder: "/data_nfs/og86asub/netmap/netmap-evaluation/results"
@@ -60,5 +48,7 @@ result_folder: "/data_nfs/og86asub/netmap/netmap-evaluation/results"
 netmap_config_dir: "/data_nfs/og86asub/netmap/netmap-evaluation/results/configurations/netmap"
 scgenerai_config_dir : "/data_nfs/og86asub/netmap/netmap-evaluation/results/configurations/scgenerai/"
 csnet_config_dir: "/data_nfs/og86asub/netmap/netmap-evaluation/results/configurations/csnet/"
+grnboost2_config_dir: "/data_nfs/og86asub/netmap/netmap-evaluation/results/configurations/grnboost2/"
+
 simulated_data_config_dir: "/data_nfs/og86asub/netmap/netmap-evaluation/results/configurations/data_simulation"
 perturb_seq_config_dir: "/data_nfs/og86asub/netmap/netmap-evaluation/results/configurations/perturb_seq"

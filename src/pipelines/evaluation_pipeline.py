@@ -9,13 +9,16 @@ import random
 
 sys.path.append('/data_nfs/og86asub/netmap/netmap-evaluation/')
 
+
 from src.methods.csnet.csnet_config import CsNetConfig
 from src.methods.scgenerai.scgenerai_config import ScGeneRAIConfig
+from src.methods.grnboost2.grnboost2_config import GRNBoost2Config
 from src.data_simulation.data_simulation_config import DataSimulationConfig
 from netmap.src.utils.netmap_config import NetmapConfig
 from utils import PipelineConfig
-
 from src.utils import write_config
+
+
 
 
 
@@ -200,13 +203,13 @@ if __name__ == "__main__":
                 csnet_config.input_data =  op.join(data_simulation_configs[net]['data_simulation']['data_path'][data_trial], 'data.h5ad')
                 csnet_config.write_yaml(netmap_config_path)
             
-    for net in data_simulation_configs:
-        for netmap_trial in data_simulation_configs[net]['csnet']:
-                for tool_trial in data_simulation_configs[net]['csnet'][netmap_trial]:
-                    netmap_call = f"python src/methods/csnet/csnet.py --config {data_simulation_configs[net]['csnet'][netmap_trial][tool_trial]['config']}" 
-                    outfile = f"{op.join(data_simulation_configs[net]['csnet'][netmap_trial][tool_trial]['result'], 'config.yaml')}"
+    # for net in data_simulation_configs:
+    #     for netmap_trial in data_simulation_configs[net]['csnet']:
+    #             for tool_trial in data_simulation_configs[net]['csnet'][netmap_trial]:
+    #                 netmap_call = f"python src/methods/csnet/csnet.py --config {data_simulation_configs[net]['csnet'][netmap_trial][tool_trial]['config']}" 
+    #                 outfile = f"{op.join(data_simulation_configs[net]['csnet'][netmap_trial][tool_trial]['result'], 'config.yaml')}"
 
-                pm.run(netmap_call, outfile)
+    #             pm.run(netmap_call, outfile)
 
 
 
@@ -247,18 +250,12 @@ if __name__ == "__main__":
                 for tool_trial in data_simulation_configs[net]['netmap'][netmap_trial]:
                     try:
                         print(tool_trial)
-                        netmap_call = f"python src/methods/netmap/netmap_runner_v4.py --config {data_simulation_configs[net]['netmap'][netmap_trial][tool_trial]['config']} --dataset_config {data_simulation_configs[net]['data_simulation']['configs'][netmap_trial]}" 
+                        netmap_call = f"python src/methods/netmap/netmap_runner.py --config {data_simulation_configs[net]['netmap'][netmap_trial][tool_trial]['config']} --dataset_config {data_simulation_configs[net]['data_simulation']['configs'][netmap_trial]}" 
                         outfile = f"{op.join(data_simulation_configs[net]['netmap'][netmap_trial][tool_trial]['result'], 'config.yaml')}"
                         pm.run(netmap_call, outfile )
                     except:
                         continue
 
-    # for net in data_simulation_configs:
-    #     for netmap_trial in data_simulation_configs[net]['netmap']:
-    #             netmap_call = f"python src/methods/netmap/netmap_runner.py --config {data_simulation_configs[net]['netmap'][netmap_trial]['config']} --dataset_config {data_simulation_configs[net]['data_simulation']['configs'][netmap_trial]}" 
-    #             print(netmap_call)
-    #             outfile = f"{op.join(data_simulation_configs[net]['netmap'][netmap_trial]['result'], 'config.yaml')}"
-    #             pm.run(netmap_call, outfile )
 
     
     
@@ -295,6 +292,32 @@ if __name__ == "__main__":
     #                 pm.run(netmap_call, outfile )
 
 
+    ## STEP 5.1 GRNBOOST2
+    # Create all config files for csnet run
+    for net in data_simulation_configs:
+        for c in pipeline_config.grnboost2_base_configs:
+            netmap_trial = op.basename(c).replace('.yaml', '')
+            grnboost2_config = GRNBoost2Config.read_yaml(yaml_file=c)
+
+            for data_trial in data_simulation_configs[net]['data_simulation']['configs']:
+
+                config_dir = op.join(pipeline_config.grnboost2_config_dir, netmap_trial, data_trial)
+                os.makedirs(config_dir, exist_ok=True)
+                netmap_config_path = op.join(config_dir, f"{net}.config.yaml")
+                
+                grnboost2_config.output_directory =  op.join(pipeline_config.result_folder, 'grnboost2', netmap_trial, data_trial, net)
+                data_simulation_configs = pipeline_update_tool_info(data_simulation_configs, netmap_config_path, grnboost2_config.output_directory, data_trial, net, 'grnboost2', netmap_trial)
+
+                grnboost2_config.input_data =  op.join(data_simulation_configs[net]['data_simulation']['data_path'][data_trial], 'data.h5ad')
+                grnboost2_config.write_yaml(netmap_config_path)
+            
+    for net in data_simulation_configs:
+        for netmap_trial in data_simulation_configs[net]['grnboost2']:
+                for tool_trial in data_simulation_configs[net]['grnboost2'][netmap_trial]:
+                    netmap_call = f"python src/methods/grnboost2/grnboost2.py --config {data_simulation_configs[net]['grnboost2'][netmap_trial][tool_trial]['config']}" 
+                    outfile = f"{op.join(data_simulation_configs[net]['grnboost2'][netmap_trial][tool_trial]['result'], 'config.yaml')}"
+
+                pm.run(netmap_call, outfile)
 
 
 
@@ -318,6 +341,24 @@ if __name__ == "__main__":
         print(eval_call)
         outfile = f"{op.join(pipeline_config.summary_output_dir, net, 'results.yaml')}"
         pm.run(eval_call, outfile )
+
+    for net in data_simulation_configs:
+        # take any data simulation trial
+        config_list = "--config_list "
+        eval_call = f"python src/evaluation/compute_metrics_preclustered.py --pipeline_config {config_file} " 
+
+        for data_trial in data_simulation_configs[net]['data_simulation']['configs']:
+            eval_call+= f"--dataset_config {data_simulation_configs[net]['data_simulation']['configs'][data_trial]} "
+            for t in ['grnboost2']:
+                for tool_trial in data_simulation_configs[net][t][data_trial]:
+                    print(tool_trial)
+                    config_list+= f"{t}_{tool_trial}={data_simulation_configs[net][t][data_trial][tool_trial]['config']} " 
+        eval_call+=config_list
+
+        print(eval_call)
+        outfile = f"{op.join(pipeline_config.summary_output_dir, net, 'overlaps_global.tsv')}"
+        pm.run(eval_call, outfile )
+
     
     pm.stop_pipeline()
 

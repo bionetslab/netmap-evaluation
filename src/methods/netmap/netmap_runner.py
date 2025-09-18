@@ -26,10 +26,7 @@ sys.path.append('/data_nfs/og86asub/netmap/netmap-evaluation/')
 from netmap.src.utils.data_utils import *
 from netmap.src.utils.tf_utils import *
 from netmap.src.utils.netmap_config import NetmapConfig
-from netmap.src.model.negbinautoencoder import *
-from netmap.src.model.negbinautoencoder import train_autoencoder
-from netmap.src.model.inferrence_simple import *
-from netmap.src.model.pipeline import *
+from netmap.src.model_concept import run_netmap
 
 from src.data_simulation.data_simulation_config import DataSimulationConfig
 

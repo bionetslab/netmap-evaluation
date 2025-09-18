@@ -17,6 +17,7 @@ class PipelineConfig:
     result_folder: str
     netmap_config_dir: str
     csnet_config_dir: str
+    grnboost2_config_dir: str
     scgenerai_config_dir: str
     perturb_seq_config_dir: str
     perturb_seq_subset_dir: str
@@ -28,7 +29,10 @@ class PipelineConfig:
     netmap_base_configs: List[str] = field(default_factory=list)
     csnet_base_configs: List[str] = field(default_factory=list)
     scgenerai_base_configs: List[str] = field(default_factory=list)
+    grnboost2_base_configs: List[str] = field(default_factory=list)
+
     perturb_seq_base_configs: List[str] = field(default_factory=list)
+
 
 
     @classmethod
