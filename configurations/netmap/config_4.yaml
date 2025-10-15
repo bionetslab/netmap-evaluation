@@ -8,10 +8,10 @@ grn: grn_lrp.tsv
 output_directory: /data_nfs/og86asub/netmap/NetMap_LRP/benchmark/results/base_config/config_ro/net_51_5864
 epochs: 10000 # Training uses early stopping
 model: NegativeBinomialAutoencoder   #ZINBAutoencoder
-n_models: 20
+n_models: 10
 learning_rate: 0.005
 optimizer: Adam
 validation_size: 0.2
 xai_method: GuidedBackprop
-masking_percentage: 0.1
+masking_percentage: 0.0
 aggregation_strategy: 'mean'

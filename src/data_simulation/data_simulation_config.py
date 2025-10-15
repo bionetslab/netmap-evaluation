@@ -21,6 +21,7 @@ class DataSimulationConfig:
     perturbed_genes: List[str] =  None
     separator: str = '\t'
     group_key: str = 'grn'
+    noise: bool = False
 
     @classmethod
     def read_yaml(cls, yaml_file):

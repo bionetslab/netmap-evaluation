@@ -100,28 +100,9 @@ if __name__ == "__main__":
         print(f"Error parsing YAML: {e}")
         sys.exit(1)
 
-    outfolder = op.join(pipeline_config.basedir, "benchmark")
-    pm = pypiper.PipelineManager(name="netmap_benchmark", outfolder=outfolder)
+    outfolder = op.join(pipeline_config.basedir, "benchmark_summ")
+    pm = pypiper.PipelineManager(name="netmap_benchmark_summaries", outfolder=outfolder)
     pm.timestamp("Hello!")
-
-
-    # Step 1: pull singularity container
-    target_container = "grn2gex.sif"
-    singularity_pull_container = f"mkdir -p {pipeline_config.image_dir} && cd {pipeline_config.image_dir} && singularity pull {target_container} docker://hartebrodt/grn2gex && cd -"
-    pm.run(cmd=singularity_pull_container, target=op.join(pipeline_config.image_dir, target_container), nofail=True)
-
-
-    # Step 2: network clustering
-    config_dir = op.dirname(pipeline_config.network_module_config)
-    config_filename = op.basename(pipeline_config.network_module_config)
-    singularity_run_command = f"mkdir -p {pipeline_config.input_network_dir} && mkdir -p {pipeline_config.clustered_network_dir} && singularity exec \
-                                --bind {pipeline_config.r_script_dir}:/scripts \
-                                --bind {config_dir}:/configs \
-                                --bind {pipeline_config.input_network_dir}:/usr/src/app/input \
-                                --bind {pipeline_config.clustered_network_dir}:/usr/src/app/output \
-                                {op.join(pipeline_config.image_dir, target_container)} \
-                                Rscript /scripts/network_clustering.R --config=/configs/{config_filename}"
-    pm.run(singularity_run_command, pipeline_config.clustered_network_dir)
 
     nr_networks = pipeline_config.number_test_modules
     data_simulation_configs = {}
@@ -160,31 +141,9 @@ if __name__ == "__main__":
                                                                 data_simulation_trial)
             
 
-        
+    
 
-
-    # STEP 4 RUN Singularity container to generate data
-    for net in data_simulation_configs:
-        for trial in data_simulation_configs[net]['data_simulation']['configs']:
-            trial_output_dir = op.join(pipeline_config.simulated_data_dir, trial)
-            singularity_run_command = f"mkdir -p {trial_output_dir} && singularity exec \
-                                            --bind {pipeline_config.r_script_dir}:/scripts \
-                                            --bind {op.dirname(data_simulation_configs[net]['data_simulation']['configs'][trial])}:/configs \
-                                            --bind {pipeline_config.clustered_network_dir}:/usr/src/app/input \
-                                            --bind {trial_output_dir}:/usr/src/app/output \
-                                            {pipeline_config.image_dir}/grn2gex.sif \
-                                            Rscript /scripts/simple_data_generation.R --config=/configs/{net}.config.yaml"
-
-            data_output_dir = op.join(trial_output_dir, str(net))
-            pm.run(singularity_run_command, data_output_dir)
-            
-            data_simulation_configs = pipeline_update_simulation_path(data_simulation_configs, data_output_dir, trial, net)
-
-
-
-    # STEP 5: generate tool configs.
-
-    ## STEP 5.1 CSNET
+     ## STEP 5.1 CSNET
     # Create all config files for csnet run
     for net in data_simulation_configs:
         for c in pipeline_config.csnet_base_configs:
@@ -203,14 +162,6 @@ if __name__ == "__main__":
                 csnet_config.input_data =  op.join(data_simulation_configs[net]['data_simulation']['data_path'][data_trial], 'data.h5ad')
                 csnet_config.write_yaml(netmap_config_path)
             
-    for net in data_simulation_configs:
-        for netmap_trial in data_simulation_configs[net]['csnet']:
-                for tool_trial in data_simulation_configs[net]['csnet'][netmap_trial]:
-                    netmap_call = f"python src/methods/csnet/csnet.py --config {data_simulation_configs[net]['csnet'][netmap_trial][tool_trial]['config']}" 
-                    outfile = f"{op.join(data_simulation_configs[net]['csnet'][netmap_trial][tool_trial]['result'], 'config.yaml')}"
-
-                pm.run(netmap_call, outfile)
-
 
 
     # STEP 5.3 NETMAP RUN
@@ -236,23 +187,6 @@ if __name__ == "__main__":
 
 
 
-    for net in data_simulation_configs:
-        for netmap_trial in data_simulation_configs[net]['netmap']:
-                for tool_trial in data_simulation_configs[net]['netmap'][netmap_trial]:
-                    try:
-                        print(tool_trial)
-                        netmap_call = f"python src/methods/netmap/netmap_runner.py --config {data_simulation_configs[net]['netmap'][netmap_trial][tool_trial]['config']} --dataset_config {data_simulation_configs[net]['data_simulation']['configs'][netmap_trial]}" 
-                        outfile = f"{op.join(data_simulation_configs[net]['netmap'][netmap_trial][tool_trial]['result'], 'config.yaml')}"
-                        pm.run(netmap_call, outfile )
-                    except:
-                        continue
-
-
-    
-    
-
-
-
     # STEP 5.3 SCGENERAI RUN
     # Create all config files for scGeneRAI run
     for net in data_simulation_configs:
@@ -274,14 +208,6 @@ if __name__ == "__main__":
                 scgenerai_config.write_yaml(netmap_config_path)
 
 
-    # for net in data_simulation_configs:
-    #     for netmap_trial in data_simulation_configs[net]['scgenerai']:
-    #             for tool_trial in data_simulation_configs[net]['scgenerai'][netmap_trial]:
-
-    #                 netmap_call = f"python src/methods/scgenerai/scgenerai.py --config {data_simulation_configs[net]['scgenerai'][netmap_trial][tool_trial]['config']} --dataset_config {data_simulation_configs[net]['data_simulation']['configs'][netmap_trial]}" 
-    #                 outfile = f"{op.join(data_simulation_configs[net]['scgenerai'][netmap_trial][tool_trial]['result'], 'config.yaml')}"
-    #                 pm.run(netmap_call, outfile )
-
 
     ## STEP 5.1 GRNBOOST2
     # Create all config files for csnet run
@@ -301,40 +227,27 @@ if __name__ == "__main__":
 
                 grnboost2_config.input_data =  op.join(data_simulation_configs[net]['data_simulation']['data_path'][data_trial], 'data.h5ad')
                 grnboost2_config.write_yaml(netmap_config_path)
-            
-    for net in data_simulation_configs:
-        for netmap_trial in data_simulation_configs[net]['grnboost2']:
-                for tool_trial in data_simulation_configs[net]['grnboost2'][netmap_trial]:
-                    netmap_call = f"python src/methods/grnboost2/grnboost2.py --config {data_simulation_configs[net]['grnboost2'][netmap_trial][tool_trial]['config']}" 
-                    outfile = f"{op.join(data_simulation_configs[net]['grnboost2'][netmap_trial][tool_trial]['result'], 'config.yaml')}"
-
-                pm.run(netmap_call, outfile)
 
 
-
-    write_config(data_simulation_configs, file=op.join(pipeline_config.outfolder, 'all_tests.yaml'))
 
     print(data_simulation_configs)
     # STEP 6. EVALUATE RESULTS
     for net in data_simulation_configs:
-        try:
-            # take any data simulation trial
-            config_list = "--config_list "
-            eval_call = f"python src/evaluation/compute_metrics.py --pipeline_config {config_file} " 
+        # take any data simulation trial
+        config_list = "--config_list "
+        eval_call = f"python src/evaluation/compute_metrics.py --pipeline_config {config_file} " 
 
-            for data_trial in data_simulation_configs[net]['data_simulation']['configs']:
-                eval_call+= f"--dataset_config {data_simulation_configs[net]['data_simulation']['configs'][data_trial]} "
-                for t in ['netmap', 'scgenerai', 'csnet']:
-                    for tool_trial in data_simulation_configs[net][t][data_trial]:
-                        print(tool_trial)
-                        config_list+= f"{t}_{tool_trial}={data_simulation_configs[net][t][data_trial][tool_trial]['config']} " 
-                eval_call+=config_list
+        for data_trial in data_simulation_configs[net]['data_simulation']['configs']:
+            eval_call+= f"--dataset_config {data_simulation_configs[net]['data_simulation']['configs'][data_trial]} "
+            for t in ['netmap', 'scgenerai', 'csnet']:
+                for tool_trial in data_simulation_configs[net][t][data_trial]:
+                    print(tool_trial)
+                    config_list+= f"{t}_{tool_trial}={data_simulation_configs[net][t][data_trial][tool_trial]['config']} " 
+            eval_call+=config_list
 
-                print(eval_call)
-                outfile = f"{op.join(pipeline_config.summary_output_dir,  data_trial, net, 'overlaps_global_top_k.tsv')}"
-                pm.run(eval_call, outfile )
-        except:
-            continue
+            print(eval_call)
+            outfile = f"{op.join(pipeline_config.summary_output_dir, net, 'results.yaml')}"
+            pm.run(eval_call, outfile )
 
     for net in data_simulation_configs:
         # take any data simulation trial

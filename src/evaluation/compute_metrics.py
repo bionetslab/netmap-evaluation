@@ -25,6 +25,8 @@ from src.utils import write_config
 import numpy as np
 import pandas as pd
 from typing import Optional
+import itertools
+import warnings
 
 
 def downstream_recipe(adata)-> anndata.AnnData:
@@ -32,12 +34,13 @@ def downstream_recipe(adata)-> anndata.AnnData:
     Downstream reciepe for an LRP anndata object:
     TODO: replace the config dict, to pass values
     """
+    print(adata.shape)
     config = {'min_cells':1, 'n_neighbors': 30, 'leiden_resolution': 0.1, 'n_components': 30, 'knn_neighbors': 30}
-    sc.pp.filter_genes(adata, min_cells=config['min_cells'])
+    #sc.pp.filter_genes(adata, min_cells=1)
     #sc.pl.pca_variance_ratio(adata, n_pcs=50, log=True)
     #sc.pp.normalize_total(adata)
     #sc.pp.log1p(adata)
-
+    print(adata.shape)
     sc.tl.pca(adata, svd_solver = 'randomized', zero_center = False)
 
     sc.pp.neighbors(adata, n_neighbors=config['knn_neighbors'])
@@ -77,7 +80,8 @@ def unify_group_labelling(adata, grn_adata, col_adata, col_grn_adata, return_map
     divided by the number of cells.
     
     """
-
+    print(adata.shape)
+    print(grn_adata.shape)
     cm = contingency_matrix(adata.obs[col_adata], grn_adata.obs[col_grn_adata])
     row_ind, col_ind = linear_sum_assignment(cm, maximize = True)
     
@@ -97,6 +101,8 @@ def unify_group_labelling(adata, grn_adata, col_adata, col_grn_adata, return_map
     grn_adata.obs[col_grn_adata_remapped] = pd.Categorical(grn_adata.obs[col_grn_adata_remapped])
 
     score = cm[row_ind, col_ind].sum()/adata.obs.shape[0]
+    print(adata.shape)
+    print(grn_adata.shape)
     if return_mapping:
         return adata, grn_adata, score, reverse_mapping
     else:
@@ -121,7 +127,9 @@ def process(grn_adata):
     if not scs.issparse(grn_adata.X):
         grn_adata.X[np.isnan(grn_adata.X) ] = 0
     grn_adata = downstream_recipe(grn_adata)
-    grn_adata = spectral_clustering(grn_adata)
+    n_clu = len(np.unique(grn_adata.obs['grn']))
+    print(f'clustering: {n_clu} clusters')
+    grn_adata = spectral_clustering(grn_adata, n_clu=n_clu)
     return grn_adata
 
 
@@ -142,54 +150,196 @@ def build_augmented_network(net):
     augmented_net['edge' ] = augmented_net['source']+'_'+augmented_net['target']
     return augmented_net
 
-
-
-def get_top_edges_per_cell(grn_adata, top_edges):
-    partition_index = grn_adata.shape[1] - top_edges
-    b = np.argpartition(grn_adata.X, partition_index, axis=1)    
-    top_idx = b[:, partition_index:]
+def get_top_edges_per_cell(grn_adata, top_idx_for_t, top_edges_val):
     
+    # Gene pair metadata is constant
     edge_metadata_np = np.array(grn_adata.var.loc[:, ['source', 'target']])
-    top_edges_metadata = edge_metadata_np[top_idx.ravel()]
-
-    top_edges_per_cell = pd.DataFrame(top_edges_metadata, columns=['source', 'target'])
-    top_edges_per_cell['cell_barcode'] = np.repeat(grn_adata.obs.index, repeats=top_edges)
-    top_edges_per_cell['top_edges'] = top_edges
     
-    return top_edges_per_cell
+    # Get (source, target) pairs for all cells at once
+    top_edges_metadata = edge_metadata_np[top_idx_for_t.ravel()]
 
-def get_top_edges_global(grn_adata, top_edges: int):
+    print(top_edges_metadata)
+    # Create a Series where each element is an (source, target) tuple
+    edge_tuples = pd.Series(
+        data=[(s, t) for s, t in top_edges_metadata],
+        name='edge_tuple'
+    )
+
+    # 4. Group by the edge tuple and count the occurrences (i.e., the number of cells)
+    # The size() method counts how many times each unique tuple appears.
+    # The result is a Series: (source, target) tuple -> cell_count
+    edge_counts_series = edge_tuples.groupby(edge_tuples).size()
+
+    # 5. Convert the resulting Series back to a DataFrame for final output
+    summary_df = edge_counts_series.reset_index(name='cell_count')
+    
+    # 6. Split the edge tuple back into separate source and target columns
+    summary_df[['source', 'target']] = pd.DataFrame(summary_df['edge_tuple'].tolist(), index=summary_df.index)
+    
+    # 7. Add the constant metadata and clean up
+    summary_df['top_edges'] = top_edges_val
+    
+    # Select and reorder final columns:
+    final_cols = ['source', 'target', 'top_edges', 'cell_count']
+    # # Create an array of cell barcodes for the corresponding edges
+    # n_cells, edges_per_cell = top_idx_for_t.shape
+    # cell_barcodes = np.repeat(grn_adata.obs.index.to_numpy(), repeats=edges_per_cell)
+
+    # # Use a dictionary to avoid DataFrame overhead for now
+    # result_data = {
+    #     'source': top_edges_metadata[:, 0],
+    #     'target': top_edges_metadata[:, 1],
+    #     'cell_barcode': cell_barcodes,
+    #     'top_edges': top_edges_val
+    # }
+    
+    #return pd.DataFrame(result_data)
+    return summary_df[final_cols]
+
+def get_top_edges_per_cell(grn_adata, top_idx_for_t, top_edges_val):
+    
+    # Gene pair metadata is constant
+    edge_metadata_np = np.array(grn_adata.var.loc[:, ['source', 'target']])
+    
+    # Get (source, target) pairs for all cells at once
+    top_edges_metadata = edge_metadata_np[top_idx_for_t.ravel()]
+
+    print(top_edges_metadata)
+    # Create a Series where each element is an (source, target) tuple
+    edge_tuples = pd.Series(
+        data=[(s, t) for s, t in top_edges_metadata],
+        name='edge_tuple'
+    )
+
+    edge_counts_series = edge_tuples.groupby(edge_tuples).size()
+
+    # 5. Convert the resulting Series back to a DataFrame for final output
+    summary_df = edge_counts_series.reset_index(name='cell_count')
+    
+    # 6. Split the edge tuple back into separate source and target columns
+    summary_df[['source', 'target']] = pd.DataFrame(summary_df['edge_tuple'].tolist(), index=summary_df.index)
+    
+    # 7. Add the constant metadata and clean up
+    summary_df['top_edges'] = top_edges_val
+    
+    # Select and reorder final columns:
+    final_cols = ['source', 'target', 'top_edges', 'cell_count']
+
+    return summary_df[final_cols]
+
+
+def get_top_edges_per_cell(grn_adata, top_idx_for_t, top_edges_val):
+    """
+    Calculates the number of cells that contain each unique top edge using 
+    NumPy's vectorized unique counting, which is faster than Pandas groupby 
+    on Python objects (tuples).
+    """
+    
+    # 1. Gene pair metadata is constant
+    # Ensure this is a NumPy array for fast indexing
+    edge_metadata_np = grn_adata.var.index.to_numpy()
+  
+    top_edges_metadata = edge_metadata_np[top_idx_for_t.ravel()]
+
+
+    # 4. Count unique rows (edges) in the structured array
+    unique_edges_structured, cell_counts = np.unique(
+        top_edges_metadata,
+        return_counts=True
+    )
+    
+    # 5. Extract results and create the DataFrame directly
+    summary_df = pd.DataFrame({
+        'edge_key': unique_edges_structured,
+        'cell_count': cell_counts
+    })
+    
+    # 6. Add the constant metadata
+    summary_df['top_edges'] = top_edges_val
+    
+    # 7. Select and reorder final columns:
+    final_cols = ['edge_key', 'top_edges', 'cell_count']
+
+
+    return summary_df[final_cols]
+
+# def get_top_edges_per_cell(grn_adata, b, top_edges, layer = 'X'):
+        
+#     start = time.monotonic()
+#     # Define how many edges to get
+#     top_edges_data = int(np.round(grn_adata.shape[1]*top_edges))
+#     # get the index
+#     partition_index = grn_adata.shape[1] - top_edges_data
+#     #subset the argsorted array
+#     top_idx = b[:, partition_index:]
+    
+
+#     edge_metadata_np = np.array(grn_adata.var.loc[:, ['source', 'target']])
+#     top_edges_metadata = edge_metadata_np[top_idx.ravel()]
+
+#     top_edges_per_cell = pd.DataFrame(top_edges_metadata, columns=['source', 'target'])
+#     top_edges_per_cell['cell_barcode'] = np.repeat(grn_adata.obs.index, repeats=top_edges_data)
+#     top_edges_per_cell['top_edges'] = top_edges
+#     print(f'Pandas galore{(time.monotonic()-start)}')
+
+#     return top_edges_per_cell
+
+def get_top_edges_global(grn_adata, top_edges: int, layer = 'X'):
+    # Select the correct data based on the layer
+    if layer == 'X':
+        data = grn_adata.X
+    else:
+        data = grn_adata.layers[layer]
+     
+    b = np.argsort(data, axis=1)
+    # Calculate partition indices for all top_edges values
+    top_edges_data_list = [int(np.round(grn_adata.shape[1] * t)) for t in top_edges]
+    partition_indices = [grn_adata.shape[1] - n for n in top_edges_data_list]
+    
     top = []
+    
+    for t_val, part_idx in zip(top_edges, partition_indices):
+        # Subset the argsorted array *once* for each t_val
+        top_idx = b[:, part_idx:]
+        
+        top.append(get_top_edges_per_cell(grn_adata, top_idx, t_val))
 
-    for t in top_edges:
-        top.append(get_top_edges_per_cell(grn_adata, t))
-
-    top = pd.concat(top)
+    top = pd.concat(top, ignore_index=True)
     return top
 
 
-def get_top_edges_by_target(grn_adata, top_edges: int):
+def get_top_edges_by_target(grn_adata, top_edges: int, layer:str):
+    start = time.monotonic()
 
+    if layer == 'X':
+        data = grn_adata.X
+    else:
+        data = grn_adata.layers[layer]
+
+    # Perform the argsort, pass
+    b = np.argsort(data, axis=1)
     top = []
     for tar in np.unique(grn_adata.var.target):
         
         sub = grn_adata[:, grn_adata.var.target == tar]
 
         for t in top_edges:
-            if t>sub.shape[1]:
-                continue
-            top.append(get_top_edges_per_cell(sub, t))
+            top.append(get_top_edges_per_cell(sub, b, t, layer = layer))
 
     top = pd.concat(top)
     return top
 
 
-def get_top_edges_per_cell_per_cluster(grn_adata, nets, cluster_var = 'spectral_remap', top_edges=[100], group_by_target = False):
-    
+
+def get_top_edges_per_cell_per_cluster(grn_adata, nets, cluster_var = 'spectral_remap', top_edges=[100], group_by_target = False, layer='X'):
+    print(f'grn_adata shape {grn_adata.shape}')
     grns = grn_adata.obs[cluster_var].unique()
 
     top_edges_per_cell_collector = []
-    
+    #net_sets = {net[0]: set(net[1][['source', 'target']].itertuples(index=False, name=None)) for net in nets}
+    net_sets = {net[0]: {f'{source}_{target}' for source, target in net[1][['source', 'target']].itertuples(index=False, name=None)}  for net in nets}
+    net_sets_rev = {net[0]: {f'{target}_{source}' for source, target in net[1][['source', 'target']].itertuples(index=False, name=None)}  for net in nets}
+
     for i in range(len(nets)):
         for j in range(len(grns)):
             clu = grns[j]
@@ -198,47 +348,51 @@ def get_top_edges_per_cell_per_cluster(grn_adata, nets, cluster_var = 'spectral_
             print(f"Cluster {clu} -- GRN {grn[0]}")
 
             grn_adata_sub = grn_adata[grn_adata.obs[cluster_var] == clu]
+            
+
             # identify the genes with the highest mean
             if group_by_target:
-                top_edges_per_cell = get_top_edges_by_target(grn_adata_sub,  top_edges)
+                top_edges_per_cell = get_top_edges_by_target(grn_adata_sub,  top_edges, layer=layer)
             else:
-                top_edges_per_cell = get_top_edges_global(grn_adata_sub,  top_edges)
+                top_edges_per_cell = get_top_edges_global(grn_adata_sub,  top_edges, layer=layer)
 
+            directions = {'forward':['source', 'target'], 'reverse':['target', 'source']}
+            start = time.monotonic()
+            for diri in directions.keys():
+                for te in top_edges:
+                    # 1. Filter current top edges
+                    
+                    current_top_edges = top_edges_per_cell[top_edges_per_cell.top_edges == te]
 
-            for te in top_edges:
-                agg = top_edges_per_cell[top_edges_per_cell.top_edges==te].merge(grn[1], left_on=['source', 'target'], right_on = ['source', 'target']).loc[:,['cell_barcode']].groupby(['cell_barcode']).value_counts()
-                
-                agg = agg.reset_index()
-                agg.columns = ['cell_barcode', 'egde_count']
-                mean_edges_recovered = agg.loc[ :, "egde_count"].median()
-                number_of_cells = agg.shape[0]
+                    if diri == 'forward':
+                         # 2. Identify the gold standard set based on direction
+                        gold_standard_set = net_sets[grn[0]]
+                        is_tp = current_top_edges[current_top_edges.edge_key.isin(list(gold_standard_set))]
+                    else:
+                        gold_standard_set = net_sets_rev[grn[0]]
+                        is_tp = current_top_edges[current_top_edges.edge_key.isin(list(gold_standard_set))]
 
-                #print(agg)
-                tt = top_edges_per_cell[top_edges_per_cell.top_edges==te].loc[:,['source', 'target']].groupby(['source', 'target']).value_counts()
+                    mean_edges_recovered = is_tp.shape[0]
+                    mean_cells = np.mean(is_tp.cell_count)
+                    # n_top, grn, TP = overlap, FP = top_k-TP
+                    # Number edges 
+                    n_edges = top_edges_per_cell[top_edges_per_cell.top_edges==te].shape[0]
+                    
+                    gold_standard_edges = grn[1].shape[0]
+                    current_collector =  [te, grn[0], mean_edges_recovered, mean_cells, gold_standard_edges, grn_adata.var.shape[0]]
 
-                #print(tt)
-                agg['n_top'] = te
-                agg['net'] = grn[0]
-                # n_top, grn, TP = overlap, FP = top_k-TP
-                # Number edges 
-                n_edges = top_edges_per_cell[top_edges_per_cell.top_edges==te].shape[0]
-                TP = agg.shape[0]
-                FP = n_edges - TP
-                FN = grn[1].shape[0]-TP
-                gold_standard_edges = grn[1].shape[0]
-                current_collector =  [te, grn[0], mean_edges_recovered, number_of_cells,  gold_standard_edges, grn_adata.var.shape[0]]
-
-                if i == j:
-                    current_collector.append('on_target')
-                else: 
-                    current_collector.append('off_target')
-                
-                #print(current_collector)
-                top_edges_per_cell_collector.append(current_collector)
+                    if i == j:
+                        current_collector.append('on_target')
+                    else: 
+                        current_collector.append('off_target')
+                    
+                    current_collector.append(diri)
+                    top_edges_per_cell_collector.append(current_collector)
+            print(f'Compute top and collect {time.monotonic()-start}')
 
 
     top_edges_per_cell_collector = pd.DataFrame(top_edges_per_cell_collector)
-    top_edges_per_cell_collector.columns = ['n_top', 'net', 'avg_edges_recovered', 'n_cells', 'gold_standard_edges', 'max_possible_edges', 'target']
+    top_edges_per_cell_collector.columns = ['n_top', 'net', 'avg_edges_recovered', 'mean_cell_count', 'gold_standard_edges', 'max_possible_edges', 'target', 'direction']
 
     return top_edges_per_cell_collector
 
@@ -257,48 +411,70 @@ def reformat_dataframe(recovery_rates, config_name):
 
 
 
-def compute_metrics(grn_ads, nets, augmented_nets, global_nets, group_key='grn', group_by_target = False):
+def compute_metrics(grn_ads, nets, augmented_nets, global_nets, group_key='grn', group_by_target = False, mask=False, aggregate=False):
     collect_results = {}
     results = []
     for method in grn_ads:
         print(f'Running for {method}')
-        
         collect_results[method] = compute_egde_overlaps_simple(grn_ads[method], nets)
-        grn_ads[method] = process(grn_ads[method])
-        print(f'Unify group for {method}')
+        if mask :
+            #Mask the values with 0 for PCA
+            grn_ads[method][~grn_ads[method].layers['mask']] = 0
 
+        grn_ads[method] = process(grn_ads[method])
+
+        print(f'Unify group for {method}')
         grn_ads[method], grn_ads[method], score = unify_group_labelling(grn_ads[method], grn_ads[method], group_key, 'spectral')
         collect_results[method]['clustering_score'] = float(score)
+
+        if mask :
+            #Now mask Mask the values with -np.inf for argsort
+            grn_ads[method][~grn_ads[method].layers['mask']] = -np.inf
 
         if group_by_target:
             top_edges = [1,2,3,4,5,10, 15, 20, 25, 50]
         else:
-            top_edges = [10, 50, 100, 500, 1000, 2500, 5000, 10000, 25000]
- 
-
-        print(f'Getting top edges for {method}')
-
-        start = time.monotonic()
-        top_edges_per_cell_collector = get_top_edges_per_cell_per_cluster(grn_ads[method], nets, cluster_var = 'spectral_remap', top_edges=top_edges, group_by_target = group_by_target)
-        top_edges_per_cell_collector_augmented = get_top_edges_per_cell_per_cluster(grn_ads[method], augmented_nets, cluster_var = 'spectral_remap', top_edges=top_edges, group_by_target = group_by_target)
-        top_edges_per_cell_collector_global = get_top_edges_per_cell_per_cluster(grn_ads[method], global_nets, cluster_var = 'spectral_remap', top_edges=top_edges,group_by_target = group_by_target)
-
-        
-        top_edges_per_cell_collector['method'] = method
-        top_edges_per_cell_collector['net_type'] = 'strict'
-        top_edges_per_cell_collector_augmented['method'] = method
-        top_edges_per_cell_collector_augmented['net_type'] = 'extended'
-        top_edges_per_cell_collector_global['method'] = method
-        top_edges_per_cell_collector_global['net_type'] = 'unspecific'
+            top_edges = [0.001, 0.01, 0.05, 0.1, 0.2, 0.25, 0.5, 0.75, 1.0]
 
 
-        results.append(top_edges_per_cell_collector)
-        results.append(top_edges_per_cell_collector_augmented)
-        results.append(top_edges_per_cell_collector_global)
 
+        if aggregate:
+            current_grn = sc.get.aggregate(grn_ads[method],by='spectral_remap', func=['mean'])
+            current_grn = sc.AnnData(current_grn.layers['mean'], var = current_grn.var, obs = current_grn.obs)
+        else:
+            current_grn = grn_ads[method]
+
+        for l in  ['X'] + list(current_grn.layers):
+            #if l in ['quantile_count', 'raw_attribution', 'raw_attribution_quantile_count', 'X']:
+            # Remove raw attribution and raw attribution quantile count.
+            if l in ['quantile_count',  'X']:
+
+                print(f'Running for layer {l}')
+                print('Running for strict')
+                top_edges_per_cell_collector = get_top_edges_per_cell_per_cluster(current_grn, nets, cluster_var = 'spectral_remap', top_edges=top_edges, group_by_target = group_by_target, layer=l)
+                print('Running for augmented')
+                #top_edges_per_cell_collector_augmented = get_top_edges_per_cell_per_cluster(grn_ads[method], augmented_nets, cluster_var = 'spectral_remap', top_edges=top_edges, group_by_target = group_by_target, layer=l)
+                print('Running for global')
+                top_edges_per_cell_collector_global = get_top_edges_per_cell_per_cluster(grn_ads[method], global_nets, cluster_var = 'spectral_remap', top_edges=top_edges,group_by_target = group_by_target, layer=l)
+
+                
+                top_edges_per_cell_collector['method'] = method
+                top_edges_per_cell_collector['net_type'] = 'strict'
+                top_edges_per_cell_collector['layer'] = l
+                #top_edges_per_cell_collector_augmented['method'] = method
+                #top_edges_per_cell_collector_augmented['net_type'] = 'extended'
+                #top_edges_per_cell_collector_augmented['layer'] = l
+                top_edges_per_cell_collector_global['method'] = method
+                top_edges_per_cell_collector_global['net_type'] = 'unspecific'
+                top_edges_per_cell_collector_global['layer'] = l
+
+
+                results.append(top_edges_per_cell_collector)
+                #results.append(top_edges_per_cell_collector_augmented)
+                results.append(top_edges_per_cell_collector_global)
 
     results = pd.concat(results)
-    return results
+    return results, collect_results
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Argument parser with two configuration files.")
@@ -352,6 +528,52 @@ def parse_args():
         config_dict[n[0].strip()] = n[1].strip() 
     return args, config_dict
 
+def average_edges(grn_adata, gene_names):
+    """
+    Creates a dictionary of binary masks for each cell and pair of genes,
+    including both forward, reverse, and self-pairs (which are all zeros).
+
+    Args:
+        matrix_cells_x_genes (np.ndarray): A 2D numpy array where rows are cells
+                                          and columns are genes.
+        gene_list (list): A list of strings containing the names of the genes,
+                          in the same order as the columns in the matrix.
+
+    Returns:
+        dict: A dictionary where keys are gene pair strings (e.g., 'GeneA_GeneB')
+              and values are 1D numpy arrays representing the binary mask for that pair
+              across all cells.
+    """
+
+    num_cells, num_edges = grn_adata.X.shape
+
+    pairwise_mask_dict = {}
+
+    gene_pairs_indices = list(itertools.combinations(gene_names, 2))
+    for g1_idx, g2_idx in gene_pairs_indices:
+        pairwise_mask_dict[f"{g1_idx}_{g2_idx}"] = np.mean(grn_adata[:, [f"{g1_idx}_{g2_idx}", f"{g2_idx}_{g1_idx}"]].X, axis = 1)
+        # add reverse bc I am lazy
+        #pairwise_mask_dict[f"{g2_idx}_{g1_idx}"] = pairwise_mask_dict[f"{g1_idx}_{g2_idx}"]
+    return pairwise_mask_dict
+
+
+def create_averaged_object(grn_ad):
+    mean_ar = average_edges(grn_ad, gene_names=grn_ad.var.source.unique())
+    column_names = mean_ar.keys()
+    averaged_object = pd.DataFrame(mean_ar, columns = column_names)
+    averaged_object = sc.AnnData(averaged_object, obs = grn_ad.obs)
+    vars = pd.DataFrame(list(averaged_object.var.index.str.split('_', expand=False)))
+    vars.columns = ['source', 'target']
+    vars.index = averaged_object.var.index
+    averaged_object.var = vars
+    return averaged_object
+
+def create_forward_reverse(net):
+    switchnet = net.loc[:, ['target', 'source']]
+    switchnet.columns = ['source', 'target']
+    for_rev_net = pd.concat([net, switchnet])
+    return for_rev_net
+
 
 def config_reader(configs):
     config_dict = {}
@@ -367,11 +589,29 @@ def config_reader(configs):
             config_dict[c] = netmap_config
     return config_dict
 
-if  __name__ == '__main__':
 
+from joblib import Parallel, delayed
+
+def compute_metrics_single(method_name, grn_ad_dict, nets, augmented_nets, global_nets, group_key, group_by_target, mask, aggregate):
+    """Wraps compute_metrics to run on a single method's data."""
+    # Pass a dictionary containing only the data for the current method
+    return compute_metrics(
+        grn_ads={method_name: grn_ad_dict[method_name].copy()}, # Use a copy to prevent in-place modification side effects
+        nets=nets,
+        augmented_nets=augmented_nets,
+        global_nets=global_nets,
+        group_key=group_key,
+        group_by_target=group_by_target,
+        mask=mask,
+        aggregate=aggregate
+    )
+
+
+
+if  __name__ == '__main__':
+    print('test')
     import argparse
     import time
-    import cProfile
 
     args, config_dict = parse_args()
     # print(f"Netmap Configuration File: {args.netmap_config}")
@@ -385,65 +625,90 @@ if  __name__ == '__main__':
     dataset_config = DataSimulationConfig.read_yaml(args.dataset_config)
     pipeline_config = PipelineConfig.read_yaml(args.pipeline_config)
 
+    directory_path = os.path.dirname(args.dataset_config)
+    config_name = os.path.basename(directory_path)
+
+    outdir = op.join(pipeline_config.summary_output_dir,config_name, dataset_config.dataset_id)
+    os.makedirs(outdir, exist_ok = True)
 
     # read network files
-    
+    # Augmented net contains edges between genes which are controlled by the same transcription factor
     nets = [(op.basename(op.dirname(filename)), pd.read_csv(op.join(pipeline_config.clustered_network_dir, filename), sep=dataset_config.separator)) for filename in dataset_config.edgelist]
     off_net = [(op.basename(op.dirname(filename)), pd.read_csv(op.join(pipeline_config.clustered_network_dir, filename), sep=dataset_config.separator)) for filename in dataset_config.common_edges]
-
-    print(nets)
-    # Augmented net contains edges between genes which are controlled by the same transcription factor
     augmented_nets = [(net[0], build_augmented_network(net[1])) for net in nets]
 
-    grn_ads = {}
 
+    #Create the networks for forward and reverse nets
+    forward_reverse_nets = [(net[0], create_forward_reverse(net[1])) for net in nets]
+    forward_reverse_nets_augmented = [(net[0], build_augmented_network(net[1])) for net in forward_reverse_nets]
+    forward_reverse_off = [(net[0], create_forward_reverse(net[1])) for net in off_net]
+
+    
+
+    grn_ads = {}
+    average_ads ={}
+    masked_ads = {}
+
+    ref_adata = None
     for c in config_dict:
+        if ref_adata is None:
+            ref_adata = sc.read_h5ad(config_dict[c].input_data)
         try:
             print('reading file')
             if c.startswith('csnet'):
                 scgenerai = sc.read_h5ad(op.join(config_dict[c].output_directory, config_dict[c].filename))
             else:
+                print(f'file: {op.join(config_dict[c].output_directory, config_dict[c].adata_filename)}')
                 scgenerai = sc.read_h5ad(op.join(config_dict[c].output_directory, config_dict[c].adata_filename))
                 print(scgenerai.var)
+            # Add reference variable
+            scgenerai.obs['grn'] = pd.Categorical(ref_adata.obs['grn'])
             grn_ads[c] = scgenerai
+            print(scgenerai.shape)
+            # Create average object (forward and backward edge)
+            average_ads[c] = create_averaged_object(scgenerai.copy())
+                        
+            print(scgenerai.shape)
+
+            # Make a copy for the masking.
+            masked_ad = scgenerai.copy()
+            masked_ads[c] = masked_ad
+            print(scgenerai.shape)
+
         except:
             continue
 
+   
+
     
-    # READ all anndata objects
-    # try:k_t
-    #     print(op.join(scgenerai_config.output_directory, scgenerai_config.adata_filename))
-    #     scgenerai = sc.read_h5ad(op.join(scgenerai_config.output_directory, scgenerai_config.adata_filename))
-    #     grn_ads['scgenerai'] = scgenerai
-    #     print(scgenerai)
-    # except FileNotFoundError:
-    #     print('ScGeneRAI not found')
-    
-    # try:
-    #     csnet = sc.read_h5ad(op.join(csnet_config.output_directory,csnet_config.filename+".csn.h5ad"))
-    #     grn_ads['csnet'] = csnet
-    # except FileNotFoundError:
-    #     print('ScGeneRAI not found')
-    
-    # try:
-    #     netmap = sc.read_h5ad(op.join(netmap_config.output_directory,netmap_config.adata_filename))
-    #     grn_ads['netmap'] = netmap
-    #     grn_ads['netmap'].obs['grn'] = pd.Categorical(grn_ads['csnet'].obs['grn'])
-
-    # except FileNotFoundError:
-    #     print('Ntmap not found')
-
-
-
-
-    overlaps = compute_metrics(grn_ads=grn_ads, nets= nets, augmented_nets=augmented_nets, global_nets=off_net, group_key=dataset_config.group_key, group_by_target=True)
-
-    overlaps_ungrouped = compute_metrics(grn_ads=grn_ads, nets= nets, augmented_nets=augmented_nets, global_nets=off_net, group_key=dataset_config.group_key, group_by_target=False)
-
-    outdir = op.join(pipeline_config.summary_output_dir, dataset_config.dataset_id)
-    os.makedirs(outdir, exist_ok = True)
-    overlaps.to_csv(op.join(outdir, 'overlaps_per_target.tsv'), sep='\t')
+    print('Starting computation')
+    start = time.monotonic()
+    overlaps_ungrouped, collect_results = compute_metrics(grn_ads=grn_ads, nets= nets, augmented_nets=augmented_nets, global_nets=off_net, group_key=dataset_config.group_key, group_by_target=False, aggregate=False)
     overlaps_ungrouped.to_csv(op.join(outdir, 'overlaps_global_top_k.tsv'), sep='\t')
+    write_config(c = collect_results, file= op.join(outdir, 'clustering_score.json'))
+    print(f'Elapsed: {time.monotonic()-start}')
+
+
+    #overlaps_aggregated, collect_results_agg = compute_metrics(grn_ads=grn_ads, nets= nets, augmented_nets=augmented_nets, global_nets=off_net, group_key=dataset_config.group_key, group_by_target=False, aggregate=True)
+    #overlaps_aggregated.to_csv(op.join(outdir, 'overlaps_global_top_k_cluster_aggregated.tsv'), sep='\t')
+
+
+
+    # try:
+    #     overlaps_masked, collect_results_masked = compute_metrics(grn_ads=masked_ads, nets= nets, augmented_nets=augmented_nets, global_nets=off_net, group_key=dataset_config.group_key, group_by_target=False, mask=True)
+    #     overlaps_masked.to_csv(op.join(outdir, 'overlaps_global_top_k_masked.tsv'), sep='\t')
+    #     write_config(c = collect_results_masked, file= op.join(outdir, 'clustering_score_masked.json'))
+
+    # except:
+    #     print("error")
+    
+    # try:
+    #     overlaps_averaged, collect_results_avg = compute_metrics(grn_ads=average_ads, nets= forward_reverse_nets, augmented_nets=forward_reverse_nets_augmented, global_nets=forward_reverse_off, group_key=dataset_config.group_key, group_by_target=False)
+    #     overlaps_averaged.to_csv(op.join(outdir, 'overlaps_global_top_k_averaged.tsv'), sep='\t')
+    #     write_config(c = collect_results_avg, file= op.join(outdir, 'clustering_score_averaged.json'))
+
+    # except:
+    #     print('error')
 
 
 

@@ -80,7 +80,7 @@ def run_csndm(config):
         csn_p = csn > p
         # Degree = number of edges per gene (excluding self-connections)
         ndm[:, k] = np.sum(csn, axis=1) - np.diag(csn_p)
-        print(f"Cell {k+1} is completed")
+        #print(f"Cell {k+1} is completed")
 
         collect_networks.append(csn.flatten())
         collect_significance.append(csn_p.flatten())

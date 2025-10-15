@@ -41,7 +41,7 @@ config <- yaml.load_file(opt$config)
 
 ###### DATA SIMULATION #######################################################################
 # Define required variables within 'data_simulation'
-required_vars_simulation <- c("n_cells", "n_celltypes", "edgelist", 'nodelist', "seed")
+required_vars_simulation <- c("n_cells", "n_celltypes", "edgelist", 'nodelist', "seed", 'noise')
 
 # Check for missing variables in the 'data_simulation' section
 missing_vars <- required_vars_simulation[!required_vars_simulation %in% names(config)]
@@ -88,14 +88,15 @@ commonlist<-read_dataframes('/usr/src/app/input',config$common_edges )
 # output_dir<-file.path("/home/bionets-og86asub/Documents/netmap/thenetmap/NetMap_LRP/data/simulation", config$dataset_id)
 
 print('UPDATED')
-
+print(config$noise)
 dataset<-create_gex_data_easy(net = edgelist, 
                          common_net = commonlist,
                          net_name = config$dataset_id,
                          seed = config$seed,
                          base_effect = config$base_effect,
                          mean = config$mean,
-                         sd = config$sd)
+                         sd = config$sd,
+                         noise=config$noise)
 
 gex.dir<-file.path(output_dir,config$dataset_id )
 gex.dir<-save_generated_data(dataset$net, dataset$counts, dataset$meta, gex_dir =gex.dir, disregulated_info = NULL)

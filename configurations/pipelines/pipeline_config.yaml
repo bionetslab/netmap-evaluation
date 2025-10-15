@@ -12,6 +12,11 @@ summary_output_dir: "/data_nfs/og86asub/netmap/netmap-evaluation/results/summari
 
 data_simulation_base_configs:
     - "/data_nfs/og86asub/netmap/netmap-evaluation/configurations/data_simulation/config_easy.yaml"
+    - "/data_nfs/og86asub/netmap/netmap-evaluation/configurations/data_simulation/config_noise.yaml"
+    - "/data_nfs/og86asub/netmap/netmap-evaluation/configurations/data_simulation/config_three.yaml"
+    #- "/data_nfs/og86asub/netmap/netmap-evaluation/configurations/data_simulation/config_five.yaml"
+
+
 
 netmap_base_configs:
     - "/data_nfs/og86asub/netmap/netmap-evaluation/configurations/netmap/config_1.yaml"
@@ -20,8 +25,9 @@ netmap_base_configs:
     - "/data_nfs/og86asub/netmap/netmap-evaluation/configurations/netmap/config_4.yaml"
     - "/data_nfs/og86asub/netmap/netmap-evaluation/configurations/netmap/config_5.yaml"
     - "/data_nfs/og86asub/netmap/netmap-evaluation/configurations/netmap/config_6.yaml"
-
-
+    - "/data_nfs/og86asub/netmap/netmap-evaluation/configurations/netmap/config_7.yaml"
+    - "/data_nfs/og86asub/netmap/netmap-evaluation/configurations/netmap/config_8.yaml"
+    - "/data_nfs/og86asub/netmap/netmap-evaluation/configurations/netmap/config_9.yaml"
 
 
 
@@ -34,13 +40,9 @@ scgenerai_base_configs:
 
 grnboost2_base_configs:
     - "/data_nfs/og86asub/netmap/netmap-evaluation/configurations/grnboost2/config.yaml"
-    - "/data_nfs/og86asub/netmap/netmap-evaluation/configurations/grnboost2/config_2.yaml"
-
-
 
 perturb_seq_base_configs:
     - "/data_nfs/og86asub/netmap/netmap-evaluation/configurations/perturb_seq/config.yaml"
-
 
 
 result_folder: "/data_nfs/og86asub/netmap/netmap-evaluation/results"
