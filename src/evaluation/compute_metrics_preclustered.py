@@ -36,13 +36,11 @@ def calculate_recovered_edges(inferred_grn, gold_standard_grn, k_values):
 
     # Filter k_values to not exceed the total number of inferred edges
     max_k = len(inferred_grn)
-    effective_k_values = [k for k in k_values if k <= max_k]
-    effective_k_values.append(inferred_grn.shape[0])
 
     # Initialize a list to store results
     results = []
 
-    for k in effective_k_values:
+    for k in k_values:
         top_k_inferred = inferred_grn.head(k)
 
         # Create a set of the top k inferred edges
@@ -57,7 +55,7 @@ def calculate_recovered_edges(inferred_grn, gold_standard_grn, k_values):
         else:
             percentage = 0  # Avoid division by zero if gold standard is empty
 
-        results.append({'n_top': k, 'percentage_recovered': percentage})
+        results.append({'n_top': k, 'percentage_recovered': percentage, 'tp': recovered_edges, 'gs_count': total_gold_standard_edges, 'pp': len(top_k_edges) })
 
     results = pd.DataFrame(results)
     return results
@@ -80,6 +78,7 @@ def compute_metric(net, nets, k_thresholds, per_target=True):
             recovery_rate['net'] = n
             recovery_rates.append(recovery_rate)
     recovery_rates = pd.concat(recovery_rates)
+
     return recovery_rates
 
 
@@ -88,12 +87,12 @@ def compute_metric(net, nets, k_thresholds, per_target=True):
 def reformat_dataframe(recovery_rates, config_name):
         # Assuming your DataFrame is named df
     recovery_rates = recovery_rates.pivot_table(
-        index=['n_top', 'net'],
+        index=['n_top', 'net', 'grn', 'pp', 'gs_count'],
         columns='type',
-        values='percentage_recovered'
+        values=['percentage_recovered', 'tp' ]
     ).reset_index()
+    #recovery_rates.columns = ['_'.join(col).strip() for col in recovery_rates.columns.values]
     recovery_rates['method'] = config_name
-    recovery_rates = recovery_rates.loc[:, ['method', 'n_top', 'on_target', 'off_target']]
     return recovery_rates
 
 
@@ -216,32 +215,44 @@ if  __name__ == '__main__':
 
     results_per_target_collect = []
     results_global_collect = []
+    try:
+        for c in config_dict:
 
-    for c in config_dict:
-        net = pd.read_csv(op.join(config_dict[c].output_directory, config_dict[c].grn))
-        k_thresholds = [10, 20, 50, 100, 200, 500, 5000, 7500, 10000]
+            net = pd.read_csv(op.join(config_dict[c].output_directory, config_dict[c].grn))
+            # k_thresholds = [10, 20, 50, 100, 200, 500, 5000, 7500, 10000]
+            
+            top_edges = [0.001, 0.01, 0.05, 0.1, 0.2, 0.25, 0.5, 0.75, 1.0]
 
-        results_global = compute_metric(net, nets, k_thresholds, per_target=False)
-        results_global = reformat_dataframe(results_global, c)
+            k_thresholds = [int(np.round(net.shape[0] * t)) for t in top_edges]
+
+
+
+            results_global = compute_metric(net, nets, k_thresholds, per_target=False)
+            print(results_global)
+            #results_global = reformat_dataframe(results_global, c)
+            #print(results_global)
+            results_global_collect.append(results_global)
+
+
+        # k_thresholds = [1,2, 3, 4 , 5, 10, 15, 20, 25, 50 , 75, 100]
+
+        # results_per_target = compute_metric(net, nets, k_thresholds, per_target=True)
+        # results_per_target = reformat_dataframe(results_per_target, c)
+
+        # results_per_target_collect.append(results_per_target)
+
+        results_global = pd.concat(results_global_collect)
+        # results_per_target = pd.concat(results_per_target_collect)
+        dataset_type = op.basename(op.dirname(args.dataset_config))
+        outdir = op.join(pipeline_config.summary_output_dir, dataset_type, dataset_config.dataset_id)
+
+        os.makedirs(outdir, exist_ok = True)
+        #write_config(collect_results, file=op.join(outdir, 'results.yaml'))
+        # results_per_target.to_csv(op.join(outdir, 'preclustered_overlaps_per_target.tsv'), sep='\t')
+        results_global.to_csv(op.join(outdir, 'preclustered_overlaps_global_top_k.tsv'), sep='\t')
         
-        results_global_collect.append(results_global)
-
-        k_thresholds = [1,2, 3, 4 , 5, 10, 15, 20, 25, 50 , 75, 100]
-
-        results_per_target = compute_metric(net, nets, k_thresholds, per_target=True)
-        results_per_target = reformat_dataframe(results_per_target, c)
-
-        results_per_target_collect.append(results_per_target)
-
-    results_global = pd.concat(results_global_collect)
-    results_per_target = pd.concat(results_per_target_collect)
-
-    outdir = op.join(pipeline_config.summary_output_dir, dataset_config.dataset_id)
-    os.makedirs(outdir, exist_ok = True)
-    #write_config(collect_results, file=op.join(outdir, 'results.yaml'))
-    results_per_target.to_csv(op.join(outdir, 'preclustered_overlaps_per_target.tsv'), sep='\t')
-    results_global.to_csv(op.join(outdir, 'preclustered_overlaps_global_top_k.tsv'), sep='\t')
-
+    except:
+        print("GRN boost call failed")
 
 
 

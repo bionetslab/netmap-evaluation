@@ -1,6 +1,6 @@
 import os
 import sys
-os.environ["CUDA_VISIBLE_DEVICES"]="0"
+os.environ["CUDA_VISIBLE_DEVICES"]="1"
 
 
 import torch
@@ -45,7 +45,7 @@ def run_scgenerai(config):
 
     ## Load config and setup outputs
     os.makedirs(config.output_directory, exist_ok=True)
-    sc.settings.figdir = config.output_directory
+    sc.settings.figdir = config.output_directoryN
     
     #setup temp dir for scGeneRAI to save results
     temp_dir = op.join(config.output_directory, 'tmp')

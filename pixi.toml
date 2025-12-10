@@ -39,12 +39,15 @@ dask-core="*"
 dask-expr="*"
 distributed="*"
 scikit-learn-extra = ">=0.2.0,<0.3"
+decoupler = ">=1.5.0,<2"
+xgboost = ">=3.1.2,<4"
+gtfparse = ">=2.5.0,<3"
 
 [pypi-dependencies]
 piper = ">=0.14.4, <0.15"
 rpy2 = ">=3.5.17, <4"
 napy = ">=0.2.2, <0.3"
-arboreto = { git = "https://github.com/bionetslab/arboreto_fdr.git" }
+signifikante = { git = "https://github.com/bionetslab/signifikante.git" }
 
 [feature.renv.dependencies]
 r-base = "*"

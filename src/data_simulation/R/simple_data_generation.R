@@ -7,12 +7,9 @@ suppressMessages(require(SingleCellExperiment))
 suppressMessages(library(sceasy))
 suppressMessages(library(reticulate))
 
-## Save as h5ad file
-use_python('/opt/conda/bin/python')
 
-use_condaenv('base')
-print(py_config())
-# 
+py_require()
+
 # Define command line options
 option_list <- list(
   make_option(
@@ -21,8 +18,16 @@ option_list <- list(
     default = NULL,
     help = "Path to the YAML configuration file",
     metavar = "FILE"
+  ),
+    make_option(
+    c("-d", "--data_output_dir"),
+    type = "character",
+    default = NULL,
+    help = "Path to the YAML configuration file",
+    metavar = "FILE"
   )
 )
+
 
 # Parse options
 opt_parser <- OptionParser(option_list = option_list)
@@ -38,7 +43,7 @@ print(opt$config)
 config <- yaml.load_file(opt$config)
 
 
-
+print(opt$data_output_dir)
 ###### DATA SIMULATION #######################################################################
 # Define required variables within 'data_simulation'
 required_vars_simulation <- c("n_cells", "n_celltypes", "edgelist", 'nodelist', "seed", 'noise')
@@ -58,11 +63,11 @@ if (length(missing_vars) > 0) {
 #   stop(paste("Error: Specified file", config$nodelist, "does not exist."))
 # }
 
-read_dataframes<-function(path, filelist){
+read_dataframes<-function(filelist){
     list_edgelist<-list()
     counter<-1
     for(e in filelist){
-        edgelist<-fread(file.path(path, e), sep='\t')
+        edgelist<-fread(file.path( e), sep='\t')
         edgelist$module<-counter
         list_edgelist[[counter]]<-edgelist
         counter<-counter+1
@@ -73,14 +78,14 @@ read_dataframes<-function(path, filelist){
 }
 
 
-output_dir<-file.path('/usr/src/app/output')
+output_dir<-file.path(opt$data_output_dir)
 
 
 
-edgelist<-read_dataframes('/usr/src/app/input',config$edgelist )
-nodelist<-read_dataframes('/usr/src/app/input', config$nodelist)
+edgelist<-read_dataframes(config$edgelist )
+nodelist<-read_dataframes(config$nodelist)
 
-commonlist<-read_dataframes('/usr/src/app/input',config$common_edges )
+commonlist<-read_dataframes(config$common_edges )
 
 # config <- yaml.load_file("/home/bionets-og86asub/Documents/netmap/thenetmap/dockerize-grn2gex/config.yaml")
 # edgelist<-fread(file.path("/home/bionets-og86asub/Documents/netmap/thenetmap/NetMap_LRP/data/simulation/collectri_subnetworks_2/net_135_44105/", config$edgelist), sep='\t')
@@ -98,7 +103,7 @@ dataset<-create_gex_data_easy(net = edgelist,
                          sd = config$sd,
                          noise=config$noise)
 
-gex.dir<-file.path(output_dir,config$dataset_id )
+gex.dir<-file.path(output_dir)
 gex.dir<-save_generated_data(dataset$net, dataset$counts, dataset$meta, gex_dir =gex.dir, disregulated_info = NULL)
 
 print(gex.dir)

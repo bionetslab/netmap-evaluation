@@ -8,10 +8,9 @@ suppressMessages(library(sceasy))
 suppressMessages(library(reticulate))
 
 ## Save as h5ad file
-use_python('/opt/conda/bin/python')
+py_require()
 
-use_condaenv('base')
-print(py_config())
+
 # 
 # Define command line options
 option_list <- list(
@@ -23,7 +22,7 @@ option_list <- list(
     metavar = "FILE"
   )
 )
-data_sim
+
 # Parse options
 opt_parser <- OptionParser(option_list = option_list)
 opt <- parse_args(opt_parser)

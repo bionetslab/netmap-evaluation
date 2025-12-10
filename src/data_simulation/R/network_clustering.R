@@ -13,6 +13,20 @@ option_list <- list(
     default = NULL,
     help = "Path to the YAML configuration file",
     metavar = "FILE"
+  ),
+  make_option(
+    c("-f", "--network_dir"),
+    type = "character",
+    default = NULL,
+    help = "Path to the collectri file",
+    metavar = "FILE"
+  ),
+  make_option(
+    c("-o", "--output_dir"),
+    type = "character",
+    default = NULL,
+    help = "Path to the output directory",
+    metavar = "FILE"
   )
 )
 
@@ -48,8 +62,8 @@ if (length(missing_vars) > 0) {
 
 
 
-net.dir<-file.path('/usr/src/app/output', config$network_clustering$output_network_dir)
-collectri.file <- file.path('/usr/src/app/input', config$network_clustering$input_network_file)
+net.dir<-file.path(opt$output_dir, config$network_clustering$output_network_dir)
+collectri.file <- file.path(opt$network_dir, config$network_clustering$input_network_file)
 
 
 dir.create(net.dir, recursive = TRUE)

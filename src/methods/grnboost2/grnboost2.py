@@ -1,10 +1,5 @@
 import os
 import sys
-os.environ["CUDA_VISIBLE_DEVICES"]="0"
-
-
-import torch
-torch.cuda.is_available()
 
 ## External imports
 import os
@@ -23,8 +18,13 @@ sys.path.append('/data_nfs/og86asub/netmap/netmap-evaluation/')
 
 from src.data_simulation.data_simulation_config import DataSimulationConfig
 from grnboost2_config import GRNBoost2Config
-import arboreto
+import signifikante
 
+import pandas as pd
+import numpy as np
+from signifikante.algo import grnboost2
+from signifikante.utils import load_tf_names
+import warnings
 from src.utils import write_config
 
 def parse_args():
@@ -46,11 +46,6 @@ def parse_args():
     return parser.parse_args()
 
 
-import pandas as pd
-import numpy as np
-from arboreto.algo import grnboost2
-from arboreto.utils import load_tf_names
-import warnings
 
 def run_grnboost_per_cluster(config):
 
@@ -92,7 +87,8 @@ def run_grnboost_per_cluster(config):
         # `verbose=False` to keep the output clean
         grn_df = grnboost2(expression_data=expr_matrix,
                            tf_names=tf_names,
-                           verbose=False)
+                           verbose=False,
+                           target_names = 'all')
         
         # 3. Add the cluster variable and save the GRN
         grn_df['grn'] = cluster
