@@ -248,11 +248,6 @@ if __name__ == "__main__":
                         continue
 
 
-    
-    
-
-
-
     # STEP 5.3 SCGENERAI RUN
     # Create all config files for scGeneRAI run
     for net in data_simulation_configs:
@@ -314,27 +309,27 @@ if __name__ == "__main__":
 
     write_config(data_simulation_configs, file=op.join(pipeline_config.outfolder, 'all_tests.yaml'))
 
-    print(data_simulation_configs)
-    # STEP 6. EVALUATE RESULTS
-    for net in data_simulation_configs:
-        try:
-            # take any data simulation trial
-            config_list = "--config_list "
-            eval_call = f"python src/evaluation/compute_metrics.py --pipeline_config {config_file} " 
+    # print(data_simulation_configs)
+    # # STEP 6. EVALUATE RESULTS
+    # for net in data_simulation_configs:
+    #     try:
+    #         # take any data simulation trial
+    #         config_list = "--config_list "
+    #         eval_call = f"python src/evaluation/compute_metrics.py --pipeline_config {config_file} " 
 
-            for data_trial in data_simulation_configs[net]['data_simulation']['configs']:
-                eval_call+= f"--dataset_config {data_simulation_configs[net]['data_simulation']['configs'][data_trial]} "
-                for t in ['netmap', 'scgenerai', 'csnet']:
-                    for tool_trial in data_simulation_configs[net][t][data_trial]:
-                        print(tool_trial)
-                        config_list+= f"{t}_{tool_trial}={data_simulation_configs[net][t][data_trial][tool_trial]['config']} " 
-                eval_call+=config_list
+    #         for data_trial in data_simulation_configs[net]['data_simulation']['configs']:
+    #             eval_call+= f"--dataset_config {data_simulation_configs[net]['data_simulation']['configs'][data_trial]} "
+    #             for t in ['netmap', 'scgenerai', 'csnet']:
+    #                 for tool_trial in data_simulation_configs[net][t][data_trial]:
+    #                     print(tool_trial)
+    #                     config_list+= f"{t}_{tool_trial}={data_simulation_configs[net][t][data_trial][tool_trial]['config']} " 
+    #             eval_call+=config_list
 
-                print(eval_call)
-                outfile = f"{op.join(pipeline_config.summary_output_dir,  data_trial, net, 'overlaps_global_top_k.tsv')}"
-                pm.run(eval_call, outfile )
-        except:
-            continue
+    #             print(eval_call)
+    #             outfile = f"{op.join(pipeline_config.summary_output_dir,  data_trial, net, 'overlaps_global_top_k.tsv')}"
+    #             pm.run(eval_call, outfile )
+    #     except:
+    #         continue
 
     for net in data_simulation_configs:
         # take any data simulation trial
@@ -350,9 +345,8 @@ if __name__ == "__main__":
             eval_call+=config_list
 
             print(eval_call)
-            outfile = f"{op.join(pipeline_config.summary_output_dir, net, 'overlaps_global.tsv')}"
+            outfile = f"{op.join(pipeline_config.summary_output_dir,  data_trial, net, 'preclustered_overlaps_global_top_k.tsv')}"
             pm.run(eval_call, outfile )
-
     
     pm.stop_pipeline()
 

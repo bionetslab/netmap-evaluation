@@ -28,7 +28,7 @@ netmap_base_configs:
     - "/data_nfs/og86asub/netmap/netmap-evaluation/configurations/netmap/config_7.yaml"
     - "/data_nfs/og86asub/netmap/netmap-evaluation/configurations/netmap/config_8.yaml"
     - "/data_nfs/og86asub/netmap/netmap-evaluation/configurations/netmap/config_9.yaml"
-
+    - "/data_nfs/og86asub/netmap/netmap-evaluation/configurations/netmap/config_10.yaml"
 
 
 

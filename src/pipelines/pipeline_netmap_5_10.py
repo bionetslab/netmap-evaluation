@@ -25,7 +25,7 @@ def read_yaml(yaml_file):
     return data
 
 if __name__ == "__main__":
-    config_file = op.join(op.dirname(__file__), '../../configurations/pipelines/pipeline_config_2.yaml')
+    config_file = op.join(op.dirname(__file__), '../../configurations/pipelines/pipeline_config.yaml')
     try:
         pipeline_config = PipelineConfig.read_yaml(config_file)
     except FileNotFoundError:
@@ -35,22 +35,25 @@ if __name__ == "__main__":
         print(f"Error parsing YAML: {e}")
         sys.exit(1)
 
-    outfolder = op.join(pipeline_config.basedir, "benchmark_grnboost")
+    outfolder = op.join(pipeline_config.basedir, "benchmark_netmap")
     pm = pypiper.PipelineManager(name="netmap_benchmark", outfolder=outfolder)
     pm.timestamp("Hello!")
 
 
-    data_simulation_configs = read_yaml(op.join(pipeline_config.result_folder, 'all_tests.yaml'))      
+
+    data_simulation_configs = read_yaml(op.join(pipeline_config.result_folder, 'all_tests_5_10.yaml'))      
+    
     
     for net in data_simulation_configs:
-        for netmap_trial in data_simulation_configs[net]['grnboost2']:
-                for tool_trial in data_simulation_configs[net]['grnboost2'][netmap_trial]:
-                    netmap_call = f"python src/methods/grnboost2/grnboost2.py --config {data_simulation_configs[net]['grnboost2'][netmap_trial][tool_trial]['config']}" 
-                    outfile = f"{op.join(data_simulation_configs[net]['grnboost2'][netmap_trial][tool_trial]['result'], 'config.yaml')}"
-
-                pm.run(netmap_call, outfile)
-
-
+        for netmap_trial in data_simulation_configs[net]['netmap']:
+                for tool_trial in data_simulation_configs[net]['netmap'][netmap_trial]:
+                    try:
+                        print(tool_trial)
+                        netmap_call = f"python src/methods/netmap/netmap_runner.py --config {data_simulation_configs[net]['netmap'][netmap_trial][tool_trial]['config']} --dataset_config {data_simulation_configs[net]['data_simulation']['configs'][netmap_trial]}" 
+                        outfile = f"{op.join(data_simulation_configs[net]['netmap'][netmap_trial][tool_trial]['result'], 'config.yaml')}"
+                        pm.run(netmap_call, outfile )
+                    except:
+                        continue
 
     pm.stop_pipeline()
 

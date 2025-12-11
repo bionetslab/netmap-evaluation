@@ -161,6 +161,8 @@ def build_augmented_network(net):
         augmented_net.append(cro)
     augmented_net = pd.DataFrame(np.vstack(augmented_net))
     augmented_net.columns = ['source', 'target']
+    augmented_net = pd.concat([augmented_net, net])
+    augmented_net
     augmented_net['edge' ] = augmented_net['source']+'_'+augmented_net['target']
     return augmented_net
 
@@ -705,13 +707,16 @@ if  __name__ == '__main__':
     print(f'Elapsed: {time.monotonic()-start}')
 
 
-    
-    print('Starting computation 3')
-    start = time.monotonic()
-    overlaps_ungrouped, collect_results = compute_metrics(grn_ads=grn_ads, nets= nets, augmented_nets=augmented_nets, global_nets=off_net, group_key=dataset_config.group_key, group_by_target=False, aggregate=False, added_key='leiden')
-    overlaps_ungrouped.to_csv(op.join(outdir, 'overlaps_global_top_k_leiden.tsv'), sep='\t')
-    write_config(c = collect_results, file= op.join(outdir, 'clustering_score_leiden.json'))
-    print(f'Elapsed: {time.monotonic()-start}')
+    # try:
+    #     print('Starting computation 3')
+    #     start = time.monotonic()
+    #     overlaps_ungrouped, collect_results = compute_metrics(grn_ads=grn_ads, nets= nets, augmented_nets=augmented_nets, global_nets=off_net, group_key=dataset_config.group_key, group_by_target=False, aggregate=False, added_key='leiden')
+    #     overlaps_ungrouped.to_csv(op.join(outdir, 'overlaps_global_top_k_leiden.tsv'), sep='\t')
+    #     write_config(c = collect_results, file= op.join(outdir, 'clustering_score_leiden.json'))
+    #     print(f'Elapsed: {time.monotonic()-start}')
+    # except:
+    #     print('Failed on leiden')
+    #     pass
 
 
 
