@@ -32,6 +32,8 @@ import warnings
 import numpy as np
 from collections import Counter
 from netmap.src.masking.external import *
+import time
+
 
 
 def downstream_recipe(adata)-> anndata.AnnData:
@@ -402,39 +404,39 @@ def compute_metrics(grn_ads, nets, augmented_nets, global_nets, group_key='grn',
         for l in  ['X'] + list(current_grn.layers):
             #if l in ['quantile_count', 'raw_attribution', 'raw_attribution_quantile_count', 'X']:
             # Remove raw attribution and raw attribution quantile count.
-            if l in ['quantile_count',  'X']:
+            #if l in ['quantile_count',  'X']:
                 # Select the correct data based on the layer
-                if l == 'X':
-                    data = current_grn.X
-                else:
-                    data = current_grn.layers[l]
-                
-                b = np.argsort(data, axis=1)
-                current_grn.layers['sorted'] = b
+            if l == 'X':
+                data = current_grn.X
+            else:
+                data = current_grn.layers[l]
+            
+            b = np.argsort(data, axis=1)
+            current_grn.layers['sorted'] = b
 
-                print(f'Running for layer {l}')
-                print('Running for strict')
-                top_edges_per_cell_collector = get_top_edges_per_cell_per_cluster(current_grn, nets, cluster_var = group_key, top_edges=top_edges, group_by_target = group_by_target, layer=l)
-                print('Running for augmented')
-                top_edges_per_cell_collector_augmented = get_top_edges_per_cell_per_cluster(grn_ads[method], augmented_nets, cluster_var = group_key, top_edges=top_edges, group_by_target = group_by_target, layer=l)
-                print('Running for global')
-                top_edges_per_cell_collector_global = get_top_edges_per_cell_per_cluster(grn_ads[method], global_nets, cluster_var = group_key, top_edges=top_edges,group_by_target = group_by_target, layer=l)
+            print(f'Running for layer {l}')
+            print('Running for strict')
+            top_edges_per_cell_collector = get_top_edges_per_cell_per_cluster(current_grn, nets, cluster_var = group_key, top_edges=top_edges, group_by_target = group_by_target, layer=l)
+            #print('Running for augmented')
+            #top_edges_per_cell_collector_augmented = get_top_edges_per_cell_per_cluster(grn_ads[method], augmented_nets, cluster_var = group_key, top_edges=top_edges, group_by_target = group_by_target, layer=l)
+            print('Running for global')
+            top_edges_per_cell_collector_global = get_top_edges_per_cell_per_cluster(grn_ads[method], global_nets, cluster_var = group_key, top_edges=top_edges,group_by_target = group_by_target, layer=l)
 
-                
-                top_edges_per_cell_collector['method'] = method
-                top_edges_per_cell_collector['net_type'] = 'strict'
-                top_edges_per_cell_collector['layer'] = l
-                top_edges_per_cell_collector_augmented['method'] = method
-                top_edges_per_cell_collector_augmented['net_type'] = 'extended'
-                top_edges_per_cell_collector_augmented['layer'] = l
-                top_edges_per_cell_collector_global['method'] = method
-                top_edges_per_cell_collector_global['net_type'] = 'unspecific'
-                top_edges_per_cell_collector_global['layer'] = l
+            
+            top_edges_per_cell_collector['method'] = method
+            top_edges_per_cell_collector['net_type'] = 'strict'
+            top_edges_per_cell_collector['layer'] = l
+            #top_edges_per_cell_collector_augmented['method'] = method
+            #top_edges_per_cell_collector_augmented['net_type'] = 'extended'
+            #top_edges_per_cell_collector_augmented['layer'] = l
+            top_edges_per_cell_collector_global['method'] = method
+            top_edges_per_cell_collector_global['net_type'] = 'unspecific'
+            top_edges_per_cell_collector_global['layer'] = l
 
 
-                results.append(top_edges_per_cell_collector)
-                results.append(top_edges_per_cell_collector_augmented)
-                results.append(top_edges_per_cell_collector_global)
+            results.append(top_edges_per_cell_collector)
+            #results.append(top_edges_per_cell_collector_augmented)
+            results.append(top_edges_per_cell_collector_global)
 
     results = pd.concat(results)
     return results, collect_results
@@ -555,6 +557,8 @@ def config_reader(configs):
 
 from joblib import Parallel, delayed
 
+
+    
 def compute_metrics_single(method_name, grn_ad_dict, nets, augmented_nets, global_nets, group_key, group_by_target, mask, aggregate):
     """Wraps compute_metrics to run on a single method's data."""
     # Pass a dictionary containing only the data for the current method
