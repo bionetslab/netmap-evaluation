@@ -14,7 +14,7 @@ from src.methods.csnet.csnet_config import CsNetConfig
 from src.methods.scgenerai.scgenerai_config import ScGeneRAIConfig
 from src.methods.grnboost2.grnboost2_config import GRNBoost2Config
 from src.data_simulation.data_simulation_config import DataSimulationConfig
-from netmap.src.utils.netmap_config import NetmapConfig
+from netmap.utils.netmap_config import NetmapConfig
 from utils import PipelineConfig
 from src.utils import write_config
 

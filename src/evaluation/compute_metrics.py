@@ -3,7 +3,7 @@ import os.path as op
 import os
 sys.path.append('/data_nfs/og86asub/netmap/netmap-evaluation/')
 
-from netmap.src.utils.netmap_config import NetmapConfig
+from netmap.utils.netmap_config import NetmapConfig
 from src.methods.csnet.csnet_config import CsNetConfig
 from src.methods.scgenerai.scgenerai_config import ScGeneRAIConfig
 from src.data_simulation.data_simulation_config import DataSimulationConfig
@@ -31,7 +31,7 @@ import warnings
 
 import numpy as np
 from collections import Counter
-from netmap.src.masking.external import *
+from netmap.masking.external import *
 import time
 
 

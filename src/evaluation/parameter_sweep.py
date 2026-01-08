@@ -14,28 +14,18 @@ import torch
 import yaml
 
 
-from netmap.src.utils.misc import write_config
+from netmap.utils.misc import write_config
 
 
-from netmap.src.utils.data_utils import *
-from netmap.src.utils.tf_utils import *
-from netmap.src.utils.netmap_config import NetmapConfig
+from netmap.utils.data_utils import *
+from netmap.utils.tf_utils import *
 
-from netmap.src.model.train_model import create_model_zoo
-#from netmap.src.grn.inferrence import inferrence
+from netmap.model.train_model import create_model_zoo
+import netmap.grn.inferrence as inferrence
 from src.data_simulation.data_simulation_config import DataSimulationConfig
-from netmap.src.masking.internal import *
-from netmap.src.masking.external import *
 
-#import decoupler as dc
-from netmap.src.masking.external import *
-from netmap.src.downstream.edge_selection import *
-from netmap.src.downstream.downstream import *
 from compute_metrics import build_augmented_network, create_forward_reverse
-import netmap.src.grn.inferrence as inferrence
-
 import compute_metrics
-import time
 import scipy.integrate as si
 
 
@@ -104,7 +94,6 @@ if __name__== '__main__':
             print('Processing has finished')
             exit(0)
         
-        exit(1) 
     
 
     write_config(c = {'network': net}, file= op.join(outdir, f'{net}.yaml'))
