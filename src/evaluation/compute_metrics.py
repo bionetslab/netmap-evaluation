@@ -441,6 +441,110 @@ def compute_metrics(grn_ads, nets, augmented_nets, global_nets, group_key='grn',
     results = pd.concat(results)
     return results, collect_results
 
+def compute_aggregated_grn_result(grn_adata, nets, cluster_col = 'spectral_remap' ):
+    current_grn = sc.get.aggregate(grn_adata,by=cluster_col, func=['sum'])
+    grn = pd.DataFrame(current_grn.layers['sum'].T)
+    grn.columns = [str(x) for x in current_grn.obs[cluster_col]]
+    grn['source'] = current_grn.var['source'].values
+    grn['target'] = current_grn.var['target'].values
+
+    # Assuming your dataframe is named 'df'
+    melted_df = grn.melt(
+        id_vars=['source', 'target'],    # Columns to keep as identifiers
+        value_vars=['1.0', '2.0'],       # Columns to "unpivot"
+        var_name='grn',        # Name for the new column containing '1.0' and '2.0'
+        value_name='importance'      # Name for the new column containing the numeric values
+    )
+    melted_df =melted_df.rename(columns={'source': 'TF'})
+    melted_df['grn'] = melted_df['grn'].astype (float)
+
+    top_edges = [0.001, 0.01, 0.05, 0.1, 0.2, 0.25, 0.5, 0.75, 1.0]
+    k_thresholds = [int(np.round(melted_df.shape[0]/2 * t)) for t in top_edges]
+    results_global = compute_metric(melted_df, nets, k_thresholds, per_target=False)
+    results_global['top_perc'] = top_edges * (2* len(nets))
+
+    return results_global
+
+
+def calculate_recovered_edges(inferred_grn, gold_standard_grn, k_values):
+    """
+    Computes the percentage of recovered edges for increasing k top edges in an inferred GRN.
+
+    Args:
+        inferred_grn (str): Path to a CSV file for the inferred GRN.
+                                 The file should have columns: 'regulator', 'target', 'score'.
+        gold_standard_grn (str): Path to a CSV file for the gold standard GRN.
+                                      The file should have columns: 'regulator', 'target'.
+        k_values (list): A list of integers representing the number of top edges to consider.
+
+    Returns:
+        pd.DataFrame: A DataFrame with columns 'k' and 'percentage_recovered',
+                      showing the recovery percentage for each k value.
+    """
+    # Sort inferred edges by score in descending order
+    inferred_grn = inferred_grn.sort_values(by='importance', ascending=False).reset_index(drop=True)
+
+    # Create a set of gold standard edges for efficient lookup
+    #gold_standard_edges = set(zip(gold_standard_grn['source'], gold_standard_grn['target']))
+    total_gold_standard_edges = len(gold_standard_grn)
+
+    # Filter k_values to not exceed the total number of inferred edges
+    max_k = len(inferred_grn)
+
+    # Initialize a list to store results
+    results = []
+
+    for k in k_values:
+        top_k_inferred = inferred_grn.head(k)
+
+        # Create a set of the top k inferred edges
+        top_k_edges = set([f'{s}_{t}' for s,t in zip(top_k_inferred['TF'], top_k_inferred['target'])])
+
+        # Find the intersection (recovered edges)
+        recovered_edges = len(top_k_edges.intersection(gold_standard_grn))
+
+        # Calculate percentage of recovered edges
+        if total_gold_standard_edges > 0:
+            percentage = (recovered_edges / total_gold_standard_edges)
+        else:
+            percentage = 0  # Avoid division by zero if gold standard is empty
+
+        results.append({'n_top': k, 'percentage_recovered': percentage, 'tp': recovered_edges, 'gs_count': total_gold_standard_edges, 'pp': len(top_k_edges) })
+
+    results = pd.DataFrame(results)
+    return results
+
+
+def compute_metric(net, nets, k_thresholds, per_target=True):
+    recovery_rates = []
+    grns = net['grn'].unique()
+    net_sets = {net[0]: {f'{source}_{target}' for source, target in net[1][['source', 'target']].itertuples(index=False, name=None)}  for net in nets}
+
+    for i in range(len(nets)):
+        for j in range(len(grns)):
+            clu = grns[j]
+            grn = nets[i]
+
+            gold_standard_set = net_sets[grn[0]]
+            if per_target:
+
+                recovery_rate = calculate_recovered_edges_per_target( net[net.grn == clu], gold_standard_set, k_thresholds)
+            else:
+
+                recovery_rate = calculate_recovered_edges(net[net.grn == clu], gold_standard_set, k_thresholds)
+            if i==j:
+                recovery_rate['type'] = 'on_target'
+            else:
+                recovery_rate['type'] = 'off_target'
+            
+            recovery_rate['grn'] = grn[0]
+            recovery_rate['net'] = j
+            recovery_rates.append(recovery_rate)
+    recovery_rates = pd.concat(recovery_rates)
+
+    return recovery_rates
+
+
 def parse_args():
     parser = argparse.ArgumentParser(description="Argument parser with two configuration files.")
     

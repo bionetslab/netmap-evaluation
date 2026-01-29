@@ -165,6 +165,10 @@ if __name__== '__main__':
                 start_training = time.monotonic() 
                 model_zoo = create_model_zoo(data_tensor,  n_models=10, n_epochs=10000, model_type=mt, dropout_rate=dp, hidden_dim = hyper[hd] )
                 end_training = time.monotonic()
+
+                if len(model_zoo)==0:
+                    print(f'Model failed to train {hd}_{dp}_{mt}, passing on')
+                    continue
                 
                 write_config(c = {'training_time': end_training-start_training}, file= op.join(outdir, f'{hd}_{dp}_{mt}_training_time.json'))
 
@@ -184,6 +188,8 @@ if __name__== '__main__':
                         start_inference = time.monotonic()
                         grn_adata2 = inferrence.inferrence_model_wise(model_zoo, data_tensor.cuda(), gene_names, xai, n_models=[10], background_type = bg)
                         end_inference = time.monotonic()
+                        if grn_adata2 is None:
+                            continue
                         grn_adata2.obs['grn'] = pd.Categorical(adata.obs['grn'])
                         grn_ads = {f'{xai}_{hd}_{dp}_{mt}_{bg}' : grn_adata2}
                         overlaps_ungrouped, collect_results = compute_metrics.compute_metrics(grn_ads=grn_ads, nets= nets, augmented_nets=augmented_nets, global_nets=off_net, group_key=dataset_config.group_key, group_by_target=False, aggregate=False)

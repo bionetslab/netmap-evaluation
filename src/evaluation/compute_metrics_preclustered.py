@@ -217,12 +217,13 @@ if  __name__ == '__main__':
     results_global_collect = []
     try:
         for c in config_dict:
-
+            print(c)
             net = pd.read_csv(op.join(config_dict[c].output_directory, config_dict[c].grn))
             # k_thresholds = [10, 20, 50, 100, 200, 500, 5000, 7500, 10000]
             
             top_edges = [0.001, 0.01, 0.05, 0.1, 0.2, 0.25, 0.5, 0.75, 1.0]
 
+            ## TODO: is it inflated?? 
             k_thresholds = [int(np.round(net.shape[0] * t)) for t in top_edges]
 
 
@@ -231,6 +232,7 @@ if  __name__ == '__main__':
             print(results_global)
             #results_global = reformat_dataframe(results_global, c)
             #print(results_global)
+            results_global['config'] = c
             results_global_collect.append(results_global)
 
 
