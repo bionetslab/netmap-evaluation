@@ -445,24 +445,25 @@ def compute_aggregated_grn_result(grn_adata, nets, cluster_col = 'spectral_remap
     current_grn = sc.get.aggregate(grn_adata,by=cluster_col, func=['sum'])
     grn = pd.DataFrame(current_grn.layers['sum'].T)
     grn.columns = [str(x) for x in current_grn.obs[cluster_col]]
+    varna = grn.columns
     grn['source'] = current_grn.var['source'].values
     grn['target'] = current_grn.var['target'].values
 
     # Assuming your dataframe is named 'df'
     melted_df = grn.melt(
         id_vars=['source', 'target'],    # Columns to keep as identifiers
-        value_vars=['1.0', '2.0'],       # Columns to "unpivot"
+        value_vars=grn.columns,       # Columns to "unpivot"
         var_name='grn',        # Name for the new column containing '1.0' and '2.0'
         value_name='importance'      # Name for the new column containing the numeric values
     )
+    print(melted_df)
     melted_df =melted_df.rename(columns={'source': 'TF'})
     melted_df['grn'] = melted_df['grn'].astype (float)
 
     top_edges = [0.001, 0.01, 0.05, 0.1, 0.2, 0.25, 0.5, 0.75, 1.0]
     k_thresholds = [int(np.round(melted_df.shape[0]/2 * t)) for t in top_edges]
     results_global = compute_metric(melted_df, nets, k_thresholds, per_target=False)
-    results_global['top_perc'] = top_edges * (2* len(nets))
-
+    results_global['top_perc'] = top_edges * (len(varna)* len(nets))
     return results_global
 
 
