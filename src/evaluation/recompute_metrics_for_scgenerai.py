@@ -140,17 +140,18 @@ if __name__== '__main__':
     grn_ads = {'scgenerai':grn_adata2}
     overlaps_ungrouped, collect_results = compute_metrics.compute_metrics(grn_ads=grn_ads, nets= nets, augmented_nets=augmented_nets, global_nets=off_net, group_key=dataset_config.group_key, group_by_target=False, aggregate=False)
     
-    # Add percentage and precision
-    overlaps_ungrouped = process_results(overlaps_ungrouped)
     
-    overlaps_ungrouped.to_csv(op.join(outdir, f'{scgenerai_name}_overlaps_global_top_k.tsv'), sep='\t')
+    # # Add percentage and precision
+    # overlaps_ungrouped = process_results(overlaps_ungrouped)
+    
+    # overlaps_ungrouped.to_csv(op.join(outdir, f'{scgenerai_name}_overlaps_global_top_k.tsv'), sep='\t')
 
 
 
-    overlaps_averaged, collect_results_avg = compute_metrics.compute_metrics(grn_ads=grn_ads, nets= forward_reverse_nets, augmented_nets=forward_reverse_nets_augmented, global_nets=forward_reverse_off, group_key=dataset_config.group_key, group_by_target=False)
-    overlaps_averaged = process_results(overlaps_averaged)
+    # overlaps_averaged, collect_results_avg = compute_metrics.compute_metrics(grn_ads=grn_ads, nets= forward_reverse_nets, augmented_nets=forward_reverse_nets_augmented, global_nets=forward_reverse_off, group_key=dataset_config.group_key, group_by_target=False)
+    # overlaps_averaged = process_results(overlaps_averaged)
 
-    overlaps_averaged.to_csv(op.join(outdir, f'{scgenerai_name}_overlaps_global_top_k_fr.tsv'), sep='\t')
+    # overlaps_averaged.to_csv(op.join(outdir, f'{scgenerai_name}_overlaps_global_top_k_fr.tsv'), sep='\t')
 
 
 

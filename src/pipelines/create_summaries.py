@@ -51,23 +51,23 @@ if __name__ == "__main__":
     data_simulation_configs = data_simulation_configs | data_simulation_configs_2
 
     # STEP 6. EVALUATE RESULTS
-    for net in data_simulation_configs:
-        # take any data simulation trial
-        config_list = "--config_list "
-        eval_call = f"python src/evaluation/compute_metrics.py --pipeline_config {config_file} " 
+    # for net in data_simulation_configs:
+    #     # take any data simulation trial
+    #     config_list = "--config_list "
+    #     eval_call = f"python src/evaluation/compute_metrics.py --pipeline_config {config_file} " 
 
-        for data_trial in data_simulation_configs[net]['data_simulation']['configs']:
-            eval_call+= f"--dataset_config {data_simulation_configs[net]['data_simulation']['configs'][data_trial]} "
-            for t in ['netmap', 'scgenerai', 'csnet']:
-                for tool_trial in data_simulation_configs[net][t][data_trial]:
-                    print(tool_trial)
-                    config_list+= f"{t}_{tool_trial}={data_simulation_configs[net][t][data_trial][tool_trial]['config']} " 
-            eval_call+=config_list
+    #     for data_trial in data_simulation_configs[net]['data_simulation']['configs']:
+    #         eval_call+= f"--dataset_config {data_simulation_configs[net]['data_simulation']['configs'][data_trial]} "
+    #         for t in ['netmap', 'scgenerai', 'csnet']:
+    #             for tool_trial in data_simulation_configs[net][t][data_trial]:
+    #                 print(tool_trial)
+    #                 config_list+= f"{t}_{tool_trial}={data_simulation_configs[net][t][data_trial][tool_trial]['config']} " 
+    #         eval_call+=config_list
 
-            #outfile = f"{op.join(pipeline_config.summary_output_dir, net, 'results.yaml')}"
-            outfile = f"{op.join(pipeline_config.summary_output_dir, data_trial, net, 'clustering_score.json')}"
-            print(outfile)
-            pm.run(eval_call, outfile )
+    #         #outfile = f"{op.join(pipeline_config.summary_output_dir, net, 'results.yaml')}"
+    #         outfile = f"{op.join(pipeline_config.summary_output_dir, data_trial, net, 'clustering_score.json')}"
+    #         print(outfile)
+    #         pm.run(eval_call, outfile )
 
     for net in data_simulation_configs:
         # take any data simulation trial
