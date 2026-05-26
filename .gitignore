@@ -5,7 +5,15 @@ configs/
 netmap/
 images/
 benchmark/
-
+src/manuscript_blood/unsuccessful_analyses/
+.Renviron
+.vscode
+benchmark_grnboost
+benchmark_netmap
+benchmark_scgenerai
+benchmark_summaries_preclustered_new
+.RData
+.Rhistory
 
 
 # Byte-compiled / optimized / DLL files
