@@ -391,7 +391,7 @@ def compute_metrics(grn_ads, nets, augmented_nets, global_nets, group_key='grn',
         if group_by_target:
             top_edges = [1,2,3,4,5,10, 15, 20, 25, 50]
         else:
-            top_edges = [0.001, 0.01, 0.05, 0.1, 0.2, 0.25, 0.5, 0.75, 1.0]
+            top_edges = [0.001, 0.01, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0]
 
 
 
@@ -460,7 +460,8 @@ def compute_aggregated_grn_result(grn_adata, nets, cluster_col = 'spectral_remap
     melted_df =melted_df.rename(columns={'source': 'TF'})
     melted_df['grn'] = melted_df['grn'].astype (float)
 
-    top_edges = [0.001, 0.01, 0.05, 0.1, 0.2, 0.25, 0.5, 0.75, 1.0]
+    top_edges = [0.001, 0.01, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0]
+
     k_thresholds = [int(np.round(melted_df.shape[0]/2 * t)) for t in top_edges]
     results_global = compute_metric(melted_df, nets, k_thresholds, per_target=False)
     results_global['top_perc'] = top_edges * (len(varna)* len(nets))
