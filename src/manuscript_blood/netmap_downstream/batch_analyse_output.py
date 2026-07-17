@@ -193,6 +193,7 @@ if __name__ == '__main__':
 
             sc.tl.rank_genes_groups(all_signatures, cluster_column, method='wilcoxon', key_added = "wilcoxon")
             
+            
             regulons_collector = []
             bc_rank_collector = []
             for group in all_signatures.obs[cluster_column].unique():
