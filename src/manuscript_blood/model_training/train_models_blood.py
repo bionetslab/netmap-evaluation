@@ -123,26 +123,26 @@ if __name__=='__main__':
     
 
 
-    try:
-        start = time.monotonic()
-        model_name = 'blood-10x-rep2-kallisto-cellbender-X'
-        print(model_name)
-        model_output_dir = op.join(output_dir, model_name)
-        os.makedirs(model_output_dir, exist_ok=True)
-        adata = sc.read_h5ad(op.join(basedir, 'data/blood/reprocessed/10x-rep2-kallisto-cellbender/10x-rep2-kallisto-cellbender.h5ad'))
-        print(adata)
-        train_model(adata, output_dir=model_output_dir, model_name = model_name)
-        stop = time.monotonic()
-        time_tracker.append([model_name, stop-start])
+    # try:
+    #     start = time.monotonic()
+    #     model_name = 'blood-10x-rep2-kallisto-cellbender-X'
+    #     print(model_name)
+    #     model_output_dir = op.join(output_dir, model_name)
+    #     os.makedirs(model_output_dir, exist_ok=True)
+    #     adata = sc.read_h5ad(op.join(basedir, 'data/blood/reprocessed/10x-rep2-kallisto-cellbender/10x-rep2-kallisto-cellbender.h5ad'))
+    #     print(adata)
+    #     train_model(adata, output_dir=model_output_dir, model_name = model_name)
+    #     stop = time.monotonic()
+    #     time_tracker.append([model_name, stop-start])
 
-        time_tracker_df = pd.DataFrame(time_tracker)
-        time_tracker_df.to_csv(op.join(output_dir, 'time_tracker.tsv'))
-    except Exception:
-        pass
+    #     time_tracker_df = pd.DataFrame(time_tracker)
+    #     time_tracker_df.to_csv(op.join(output_dir, 'time_tracker.tsv'))
+    # except Exception:
+    #     pass
 
 
-    time_tracker_df = pd.DataFrame(time_tracker)
-    time_tracker_df.to_csv(op.join(output_dir, 'time_tracker.tsv'))
+    # time_tracker_df = pd.DataFrame(time_tracker)
+    # time_tracker_df.to_csv(op.join(output_dir, 'time_tracker.tsv'))
 
 
     # try:
@@ -182,3 +182,76 @@ if __name__=='__main__':
     #         time_tracker_df.to_csv(op.join(output_dir, 'time_tracker_repeat.tsv'))
     # except Exception:
     #     pass
+
+
+    try:
+        start = time.monotonic()
+        model_name = 'bd-rhap-rep2-markers'
+        print(model_name)
+        model_output_dir = op.join(output_dir, model_name)
+        os.makedirs(model_output_dir, exist_ok=True)
+        adata = sc.read_h5ad(op.join(basedir, 'data/blood/reprocessed/bd-rhap-rep2/bd-rhap-rep2_with_markers.h5ad'))
+        print(adata)
+        train_model(adata, output_dir=model_output_dir, model_name = model_name)
+        stop = time.monotonic()
+        time_tracker.append([model_name, stop-start])
+
+        time_tracker_df = pd.DataFrame(time_tracker)
+        time_tracker_df.to_csv(op.join(output_dir, 'time_tracker.tsv'))
+    except Exception:
+        pass
+
+
+
+
+    try:
+        start = time.monotonic()
+        model_name = 'bd-rhap-rep1-markers'
+        print(model_name)
+        model_output_dir = op.join(output_dir, model_name)
+        os.makedirs(model_output_dir, exist_ok=True)
+        adata = sc.read_h5ad(op.join(basedir, 'data/blood/reprocessed/bd-rhap-rep1/bd-rhap-rep1_with_markers.h5ad'))
+        print(adata)
+        train_model(adata, output_dir=model_output_dir, model_name = model_name)
+        stop = time.monotonic()
+        time_tracker.append([model_name, stop-start])
+
+        time_tracker_df = pd.DataFrame(time_tracker)
+        time_tracker_df.to_csv(op.join(output_dir, 'time_tracker.tsv'))
+    except Exception:
+        pass
+
+    
+    try:
+        start = time.monotonic()
+        model_name = '10x-rep2-kallisto-cellbender-markers'
+        print(model_name)
+        model_output_dir = op.join(output_dir, model_name)
+        os.makedirs(model_output_dir, exist_ok=True)
+        adata = sc.read_h5ad(op.join(basedir, f'data/blood/reprocessed/10x-rep2-kallisto-cellbender/10x-rep2-kallisto-cellbender_with_markers.h5ad'))
+        print(adata)
+        train_model(adata, output_dir=model_output_dir, model_name = model_name)
+        stop = time.monotonic()
+        time_tracker.append([model_name, stop-start])
+
+        time_tracker_df = pd.DataFrame(time_tracker)
+        time_tracker_df.to_csv(op.join(output_dir, 'time_tracker.tsv'))
+    except Exception:
+        pass
+
+    try:
+        start = time.monotonic()
+        model_name = '10x-rep1-kallisto-cellbender-markers'
+        print(model_name)
+        model_output_dir = op.join(output_dir, model_name)
+        os.makedirs(model_output_dir, exist_ok=True)
+        adata = sc.read_h5ad(op.join(basedir, f'data/blood/reprocessed/10x-rep1-kallisto-cellbender/10x-rep1-kallisto-cellbender_with_markers.h5ad'))
+        print(adata)
+        train_model(adata, output_dir=model_output_dir, model_name = model_name)
+        stop = time.monotonic()
+        time_tracker.append([model_name, stop-start])
+
+        time_tracker_df = pd.DataFrame(time_tracker)
+        time_tracker_df.to_csv(op.join(output_dir, 'time_tracker.tsv'))
+    except Exception:
+        pass

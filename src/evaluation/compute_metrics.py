@@ -3,12 +3,9 @@ import os.path as op
 import os
 sys.path.append('/data_nfs/og86asub/netmap/netmap-evaluation/')
 
-from netmap.utils.netmap_config import NetmapConfig
-from src.methods.csnet.csnet_config import CsNetConfig
-from src.methods.scgenerai.scgenerai_config import ScGeneRAIConfig
+
 from src.data_simulation.data_simulation_config import DataSimulationConfig
 from src.pipelines.utils import PipelineConfig
-from captum.attr import GradientShap
 
 
 import anndata

@@ -87,10 +87,6 @@ nodelist<-read_dataframes(config$nodelist)
 
 commonlist<-read_dataframes(config$common_edges )
 
-# config <- yaml.load_file("/home/bionets-og86asub/Documents/netmap/thenetmap/dockerize-grn2gex/config.yaml")
-# edgelist<-fread(file.path("/home/bionets-og86asub/Documents/netmap/thenetmap/NetMap_LRP/data/simulation/collectri_subnetworks_2/net_135_44105/", config$edgelist), sep='\t')
-# nodelist<-fread(file.path("/home/bionets-og86asub/Documents/netmap/thenetmap/NetMap_LRP/data/simulation/collectri_subnetworks_2/net_135_44105/", config$nodelist), sep = '\t')
-# output_dir<-file.path("/home/bionets-og86asub/Documents/netmap/thenetmap/NetMap_LRP/data/simulation", config$dataset_id)
 
 print('UPDATED')
 print(config$noise)
