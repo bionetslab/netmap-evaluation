@@ -78,11 +78,11 @@ def run_scgenerai(input_data_file, output_directory):
         device = torch.device('cpu')
 
     print(data_test_df.shape)
-    model.fit(data_train_df, model_depth=2, nepochs=100, lr=2e-2, batch_size=5, lr_decay = 0.99,  early_stopping = True, device_name = device)
+    #.fit(data_train_df, model_depth=2, nepochs=100, lr=2e-2, batch_size=5, lr_decay = 0.99,  early_stopping = True, device_name = device)
     
     #Remove interactions between descriptors and variables
     # The documentation is wrong and to disable averaging we have to set LRPau false.
-    model.predict_networks(data_test_df,  device_name = device, PATH = temp_dir, LRPau=False )
+    #model.predict_networks(data_test_df,  device_name = device, PATH = temp_dir, LRPau=False )
     
 
     model_time = time.monotonic()-start
@@ -98,6 +98,7 @@ def run_scgenerai(input_data_file, output_directory):
 
     nl = [(row['source_gene'], row['target_gene']) for _, row in unique_edges.iterrows()]
 
+    res_data['cell_name'] = res_data['cell_name'].astype(int)
     pivot_table = res_data.pivot_table(index='cell_name', columns=['source_gene', 'target_gene'], values='LRP', fill_value=0)
     aa = pivot_table.values
 
@@ -110,7 +111,7 @@ def run_scgenerai(input_data_file, output_directory):
 
 
     time_elapsed_total = time.monotonic()-start_total
-    write_config({'time_elapsed_total': time_elapsed_total, 'time_elapsed_scgenerai': model_time}, file=op.join(output_directory, 'results.yaml'))
+    #write_config({'time_elapsed_total': time_elapsed_total, 'time_elapsed_scgenerai': model_time}, file=op.join(output_directory, 'results.yaml'))
 
     return grn_adata
 
@@ -162,6 +163,9 @@ if __name__== '__main__':
     
     grn_adata = run_scgenerai(args.input_data, args.output_dir)
 
+    print(grn_adata)
+    print(grn_adata.X)
+
     outdir = args.output_dir
     sumout = args.summary_output_dir
 
@@ -195,17 +199,17 @@ if __name__== '__main__':
 
     grn_adata.obs['grn'] = pd.Categorical(adata.obs['grn'])
 
-    grn_ads = {'scgenerai':grn_adata}
-    overlaps_ungrouped, collect_results = compute_metrics.compute_metrics(grn_ads=grn_ads, nets= nets, augmented_nets=augmented_nets, global_nets=off_net, group_key=dataset_config.group_key, group_by_target=False, aggregate=False)
+    #grn_ads = {'scgenerai':grn_adata}
+    #overlaps_ungrouped, collect_results = compute_metrics.compute_metrics(grn_ads=grn_ads, nets= nets, augmented_nets=augmented_nets, global_nets=off_net, group_key=dataset_config.group_key, group_by_target=False, aggregate=False)
     
                                                             
     aggregated_performance = compute_metrics.compute_aggregated_grn_result(grn_adata, forward_reverse_nets, cluster_col = 'spectral_remap' )
     aggregated_performance.to_csv(op.join(sumout, f'{scgenerai_name}_aggregated_performance.tsv'), sep = '\t')
-    
-    sc.pp.normalize_total(grn_adata)
-    aggregated_performance_scaled = compute_metrics.compute_aggregated_grn_result(grn_adata, nets, cluster_col = 'spectral_remap' )
-    aggregated_performance_scaled.to_csv(op.join(sumout, f'{scgenerai_name}_aggregated_performance_scaled.tsv'), sep = '\t')
-    
-    
+
+                                                                
+    aggregated_performance = compute_metrics.compute_aggregated_grn_result(grn_adata, nets, cluster_col = 'spectral_remap' )
+    aggregated_performance.to_csv(op.join(sumout, f'{scgenerai_name}_aggregated_performance_1.tsv'), sep = '\t')
+
+
     write_config(c = collect_results, file= op.join(sumout, f'{scgenerai_name}_clustering_score.json'))
 

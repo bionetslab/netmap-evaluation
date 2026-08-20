@@ -138,7 +138,7 @@ def compute_egde_overlaps_simple(grn_adata, net_list):
 
 def process(grn_adata):
     if not scs.issparse(grn_adata.X):
-        grn_adata.X[np.isnan(grn_adata.X) ] = 0
+        grn_adata.X = np.nan_to_num(grn_adata.X, nan=0.0)
     grn_adata = downstream_recipe(grn_adata)
     n_clu = len(np.unique(grn_adata.obs['grn']))
     print(f'clustering: {n_clu} clusters')
