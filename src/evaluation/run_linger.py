@@ -26,7 +26,10 @@ Both require paired, barcode-aligned scRNA + scATAC AnnData input with
 by the population/cell-type-specific steps, not by the cell-level ones). To
 build that pair from a raw 10x multiome download, run
 download_pbmc_multiome_for_linger.sh then prepare_linger_10x_multiome.py
-first.
+first. To run LINGER on the exact same cells/genes as Netmap (for a runtime
+comparison), run prepare_common_pbmc_100genes.py on top of that pair first
+and pass its adata_RNA_matched.h5ad/adata_ATAC_matched.h5ad here instead of
+prepare_linger_10x_multiome.py's raw output.
 
 Cell-level extraction loops LINGER's per-group pipeline once per requested
 cell, each iteration re-scanning all chromosomes, so it does not scale to a
