@@ -15,7 +15,6 @@ import anndata
 from netmap.downstream.edge_selection import *
 from netmap.downstream.clustering import *
 #from netmap.downstream.final_downstream import *
-from netmap.downstream.plotting import *
 
 from netmap.downstream.regulon import *
 import warnings
@@ -119,8 +118,8 @@ if __name__ == '__main__':
     immune =pangalao_markers[pangalao_markers['cell type'].str.contains('B cells|T cells|Monocytes|Dendritic|NK|Natural killer|Macrophages')]
     marker_sets = immune.groupby('cell type')['official gene symbol'].apply(set).to_dict()
 
-    cluster_mapper = {'b_cells': ['B cells', 'B cells memory', 'B cells naive'], 'cd14+_monocytes': ['Monocytes', 'Macrophages'], 'cd14-_monocytes': ['Monocytes', 'Macrophages'], 'cd4+_tcells': ['T cells','Gamma delta T cells', 'T cells', 'T cells naive' ], 'nk_cells': ['NK cells'],
-    'DC':['Dendritic cells'], 'cd8+_tcells':['T cells','Gamma delta T cells', 'T cells', 'T cells naive' ],    'pDC':['Plasmacytoid dendritic cells'],}
+    cluster_mapper = {'B cell': ['B cells', 'B cells memory', 'B cells naive'], 'CD14+ Mono': ['Monocytes', 'Macrophages'], 'CD14- Mono': ['Monocytes', 'Macrophages'], 'CD4+ T cell': ['T cells','Gamma delta T cells', 'T cells', 'T cells naive' ], 'NK cell': ['NK cells'],
+    'DC':['Dendritic cells'], 'CD8+ T cell':['T cells','Gamma delta T cells', 'T cells', 'T cells naive' ],    'pDC':['Plasmacytoid dendritic cells'],}
 
     def check_match(row):
         allowed = cluster_mapper.get(row['ct'], [])
