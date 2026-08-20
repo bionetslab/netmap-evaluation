@@ -194,6 +194,11 @@ def run(rna_h5ad, atac_h5ad, grn_dir, outdir, genome='hg38', species='Human', me
         activation='ReLU', networks=('cis',), n_cells=None, cells_file=None,
         keep_intermediate=False, skip_population=False):
     os.makedirs(outdir, exist_ok=True)
+    # LINGER's preprocess.extract_overlap_regions() passes outdir/GRNdir straight into
+    # pybedtools, which can mis-resolve a relative path against pybedtools' own package
+    # directory instead of the actual working directory -- always use absolute paths.
+    outdir = op.abspath(outdir)
+    grn_dir = op.abspath(grn_dir)
     if not outdir.endswith('/'):
         outdir = outdir + '/'
     if not grn_dir.endswith('/'):
