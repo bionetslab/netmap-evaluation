@@ -29,6 +29,11 @@ def sanitize_nullable_dtypes(adata):
                     df[col] = df[col].astype(object)
                 else:
                     df[col] = df[col].to_numpy(dtype=float, na_value=np.nan)
+        # obs_names/var_names themselves can carry the same nullable dtype
+        # (e.g. barcodes/gene names re-inferred as pandas "string" dtype by a
+        # newer pandas on read), not just regular columns.
+        if getattr(df.index.dtype, "na_value", None) is pd.NA:
+            df.index = df.index.astype(object)
     return adata
 
 
