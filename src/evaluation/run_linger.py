@@ -72,7 +72,15 @@ def _pseudobulk_and_preprocess(adata_RNA, adata_ATAC, grn_dir, genome, method, o
     RE_pseudobulk[RE_pseudobulk > 100] = 100
     TG_pseudobulk = TG_pseudobulk.fillna(0)
     RE_pseudobulk = RE_pseudobulk.fillna(0)
-    pd.DataFrame(adata_ATAC.var['gene_ids']).to_csv(op.join(outdir, 'Peaks.txt'), header=None, index=None)
+    peaks = pd.DataFrame(adata_ATAC.var['gene_ids'])
+    peaks.to_csv(op.join(outdir, 'Peaks.txt'), header=None, index=None)
+
+    # LINGER's own LL_net.TF_RE_LINGER_chr()/load_shap() hardcode 'data/Peaks.txt'
+    # relative to the process's working directory (not outdir) when method='LINGER' --
+    # write a copy there too so those internal reads succeed regardless of outdir/cwd.
+    if method == 'LINGER':
+        os.makedirs('data', exist_ok=True)
+        peaks.to_csv(op.join('data', 'Peaks.txt'), header=None, index=None)
 
     preprocess(TG_pseudobulk, RE_pseudobulk, grn_dir, genome, method, outdir)
 
