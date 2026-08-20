@@ -37,7 +37,7 @@ import scanpy as sc
 
 sys.path.append(op.abspath(op.join(op.dirname(__file__), '..', '..')))
 
-from src.utils import write_config
+from src.utils import write_config, sanitize_nullable_dtypes
 
 MARKER_DICT = {
     # --- B cells and Plasma cells ---
@@ -194,9 +194,12 @@ def run(rna_h5ad, atac_h5ad, panglaodb_csv, outdir, n_top_genes=2500, min_genes=
     final_cells = netmap_adata.obs_names
     final_genes = netmap_adata.var_names
 
-    netmap_adata.write_h5ad(op.join(outdir, "adata_netmap_100genes.h5ad"))
-    adata_RNA[final_cells, final_genes].copy().write_h5ad(op.join(outdir, "adata_RNA_matched.h5ad"))
-    adata_ATAC[final_cells].copy().write_h5ad(op.join(outdir, "adata_ATAC_matched.h5ad"))
+    rna_matched = sanitize_nullable_dtypes(adata_RNA[final_cells, final_genes].copy())
+    atac_matched = sanitize_nullable_dtypes(adata_ATAC[final_cells].copy())
+
+    sanitize_nullable_dtypes(netmap_adata).write_h5ad(op.join(outdir, "adata_netmap_100genes.h5ad"))
+    rna_matched.write_h5ad(op.join(outdir, "adata_RNA_matched.h5ad"))
+    atac_matched.write_h5ad(op.join(outdir, "adata_ATAC_matched.h5ad"))
 
     write_config(
         {
