@@ -1,4 +1,4 @@
-"""Run Netmap on the shared ~100-gene PBMC subset (see prepare_common_pbmc_100genes.py),
+"""Run Netmap on the shared PBMC subset (see prepare_pbmc_common.py),
 then sparsify the resulting GRN the same way as the blood manuscript pipeline
 (src/manuscript_blood/netmap_downstream/batch_analyse_output.py).
 
@@ -154,7 +154,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Run Netmap (+ sparsification) on the shared PBMC ~100-gene subset.")
     parser.add_argument("-r", "--rna_h5ad", type=str, required=True,
-                         help="adata_netmap_100genes.h5ad from prepare_common_pbmc_100genes.py")
+                         help="adata_netmap.h5ad from prepare_pbmc_common.py")
     parser.add_argument("-o", "--outdir", type=str, required=True)
     parser.add_argument("-m", "--model_name", type=str, default="pbmc-100genes")
     parser.add_argument("--celltype_col", type=str, default="label",
